@@ -45,7 +45,8 @@
                (m (and (file-exists? src) (gx#import-module src reload?))))
           (begin0 m (hash-put! mod-modules mod m))))))
 
-(def (module-id ctx) (gx#expander-context-id ctx))
+(def module-id gx#expander-context-id)
+(def module-id-set! gx#expander-context-id-set!)
 (def (module-package ctx) (symbol->string (mod-module-id ctx)))
 
 
