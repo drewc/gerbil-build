@@ -85,7 +85,6 @@ Test it out.
       -e '(load "~/src/gerbil-build/test/test-hello.ss")'
 #+end_src
 
-#+RESULTS:
 #+begin_src shell
 compile ~/src/gerbil-build/test/hello.ss
 compile drewc/hello
@@ -120,7 +119,6 @@ What happens if it has no package?
       -e '(load "~/src/gerbil-build/test/test-hello-no-package.ss")'
 #+end_src
 
-#+RESULTS:
 #+begin_src shell
 compile ~/src/gerbil-build/test/hello-no-package.ss
 compile hello-no-package
