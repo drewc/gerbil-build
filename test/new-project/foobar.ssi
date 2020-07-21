@@ -1,0 +1,8 @@
+prelude: :gerbil/core
+namespace: foobar
+
+(%#begin (%#export (spec: 0 hello hello))
+         (%#define-runtime
+          hello
+          drewc/build-test/new-project/new-hello-no-package#hello))
+(%#call (%#ref _gx#load-module) (%#quote "foobar__0"))

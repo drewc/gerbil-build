@@ -16,7 +16,7 @@
                   [output-dir:
                    libdir
                    invoke-gsc: #t
-                   keep-scm: #f
-                   generate-ssxi: #t
+                ;   keep-scm: #f
+                 ;  generate-ssxi: #t
                    verbose: #t
                    ]))

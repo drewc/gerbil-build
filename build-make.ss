@@ -39,8 +39,9 @@ package: std
 
 (import :gerbil/gambit/threads)
 
-(def default-gambit-gsc "gsc")
-(def default-gerbil-gxc "gxc")
+;; ./make/base
+;; (def default-gambit-gsc "gsc")
+;; (def default-gerbil-gxc "gxc")
 
 #|
 TODO:
@@ -662,7 +663,7 @@ TODO:
       (when (file-exists? statpath)
         (delete-file statpath))
       (copy-file srcpath statpath))))
-
+ ;; ./make/base
 (def (gerbil-gsc)
   (getenv "GERBIL_GSC" default-gambit-gsc))
 (def (gerbil-gxc)

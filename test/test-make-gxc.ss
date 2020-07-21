@@ -47,11 +47,9 @@
 
 (def module-id gx#expander-context-id)
 (def module-id-set! gx#expander-context-id-set!)
-(def (module-package ctx) (symbol->string (mod-module-id ctx)))
-
 
 (def mod-core-modules (make-hash-table))
-(def (mod-core-module mod settings (reload? #f))
+(def (mod-core-module mod (settings (current-make-settings)) (reload? #f))
   ;; => (values prelude module-id module-ns body)
   (def (mrm)
     (let (v (if reload? (void) (hash-ref mod-core-modules mod (void))))
@@ -65,6 +63,27 @@
         (parameterize ((current-directory srcdir))
           (mrm)))))
 
+(def core-module-prelude (cut values-ref <> 0))
 (def core-module-id (cut values-ref <> 1))
-(def (core-module-package mrm)
-  (symbol->string (core-module-id mrm)))
+(def core-module-ns (cut values-ref <> 2))
+(def core-module-code (cut values-ref <> 3))
+
+(def (mod-module-id mod (settings (current-make-settings)))
+  (let ((mcm (mod-core-module mod settings))
+        (sp (settings-package settings)))
+    ;; If the core module package is the same as the mod that means we could not
+    ;; find a package.
+    (if (equal? mod (symbol->string (core-module-id mcm)))
+      ;; If we do not have a toplevel package we are the package.
+      (if (not sp) (string->symbol mod)
+          ;; otherwise add it as a super and return
+          (string->symbol (path-expand mod sp)))
+      ;; Otherwise the mrm has the right id
+      (core-module-id mcm))))
+
+(def module-ns gx#module-context-ns)
+(def module-ns-set! gx#module-context-ns-set!)
+
+(def (prep-module-code module code)
+  (gx#core-quote-syntax (gx#core-cons '%#begin code)
+ (gx#module-context-path module) module []))
