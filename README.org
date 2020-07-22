@@ -888,14 +888,28 @@ not worry for now.
  #+end_src
 
 
-*** ~gxc-compile~
+*** Break into modules
 
     Before starting on the major reason behind the last 800 or so LiterateLoC's
-    let's start to break things up into parts.
+    let's start to break things up into parts. This helps to separate the code
+    and concerns as well as test itself on itself.
 
-    First, a ~base~ where all things spring from.
+    First, a ~base~ where all things spring from. Well, that is to say, after
+    pulling the bootstraps.
 
-#+begin_src gerbil :tangle "./make/base.ss" :mkdirp yes
+    #+begin_src gerbil :noweb-ref base-outputs
+  (def (force-outputs) (force-output (current-error-port)) (force-output)) ;; move to std/misc/ports ?
+  (def (message . lst) (apply displayln lst) (force-outputs)) ;; move to std/misc/ports ?
+    #+end_src
+
+#+begin_src gerbil :noweb-ref gsc-compile-opts
+(def (gsc-compile-opts opts)
+  (match opts
+    ([[plist ...] . rest] (listify rest))
+    (_ (listify opts))))
+#+end_src
+
+#+begin_src gerbil :tangle "./make/base.ss" :mkdirp yes :noweb yes
   package: std/make
   (import :std/misc/list :gerbil/gambit/ports)
   (export #t)
@@ -907,9 +921,9 @@ not worry for now.
     (getenv "GERBIL_GSC" default-gambit-gsc))
   (def (gerbil-gxc)
     (getenv "GERBIL_GXC" default-gerbil-gxc))
+
   ;;; Functions that should be better moved some library...
-  (def (force-outputs) (force-output (current-error-port)) (force-output)) ;; move to std/misc/ports ?
-  (def (message . lst) (apply displayln lst) (force-outputs)) ;; move to std/misc/ports ?
+  <<base-outputs>>
   (def (writeln x) (write x) (newline) (force-outputs)) ;; move to std/misc/ports ?
   (def (prefix/ prefix path) (if prefix (string-append prefix "/" path) path)) ;; move to std/misc/path ?
 
@@ -921,15 +935,17 @@ not worry for now.
     (or (vector-ref v i) (let ((x (f))) (vector-set! v i x) x)))
 
 
-  (def (gsc-compile-opts opts)
-    (match opts
-      ([[plist ...] . rest] (listify rest))
-      (_ (listify opts))))
+  <<gsc-compile-opts>>
 
 #+end_src
 
 Then the settings.
 
+#+begin_src gerbil :noweb-ref settings-verbose>=?
+(def (settings-verbose>=? settings level)
+  (def verbose (settings-verbose settings))
+  (and (real? level) (real? verbose) (>= verbose level)))
+#+end_src
 #+begin_src gerbil :noweb yes :tangle "make/settings.ss"
 package: std/make
 (export #t)
@@ -940,10 +956,7 @@ package: std/make
 
 <<unite-settings-init>>
 
-(def (settings-verbose>=? settings level)
-  (def verbose (settings-verbose settings))
-  (and (real? level) (real? verbose) (>= verbose level)))
-
+<<settings-verbose>=?>>
 #+end_src
 
 Now the expander module.
@@ -974,6 +987,7 @@ Now the expander module.
   (def expander-module-prelude gx#&phi-context-super)
 #+end_src
 
+*** ~mod~'s: Talking 'bout this generation
 Time for the ~mod~'s to rumble. What is a ~mod~? A mod is a string specifying a
 file's name and relative location.
 
@@ -991,8 +1005,8 @@ That's what we need for ~library-path~.
 #+end_src
 
 #+begin_src gerbil :tangle "make/mod.ss" :noweb yes
-  package: drewc/make
-  (import :drewc/make/expander-module ./settings :std/misc/func :std/misc/path)
+  package: std/make
+  (import ./expander-module ./settings :std/misc/func :std/misc/path)
   (export #t)
 
   <<source-path>>
@@ -1014,53 +1028,122 @@ That's what we need for ~library-path~.
   <<library-path>>
  #+end_src
 
+
+*** ~gxc-compile-file~: `make;make install`
+
+#+begin_src gerbil :noweb-ref gxc-compile-file
+  (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+    (message "... compile-file " mod)
+    (def gsc-opts (gsc-compile-opts opts))
+    (def srcpath (source-path mod ".ss" settings))
+    (let ((gxc-opts
+           [invoke-gsc: invoke-gsc?
+                        keep-scm: (not invoke-gsc?)
+                        output-dir: (settings-libdir settings)
+                        optimize: (settings-optimize settings)
+                        debug: (settings-debug settings)
+                        generate-ssxi: #t
+                        static: (settings-static settings)
+                        verbose: (settings-verbose>=? settings 9)
+                        (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+      (compile-file srcpath gxc-opts)))
+#+end_src
+*** bootstrap
+
+
 Going to have an attempt at building that before there's a function to build it,
 as we have all along.
 
-#+begin_src gerbil :tangle ./test/test-first-build.ss :noweb yes
+Because we cannot build ourselves we bootstrap our build.
+
+#+begin_src gerbil :tangle ./test/test-bootstrap1.ss :noweb yes
+  (import :std/misc/path :std/misc/list :gerbil/compiler)
+
   <<unite-settings-struct>>
 
+  <<settings-verbose>=?>>
   <<gerbil-build-cores>>
 
   <<unite-settings-init>>
 
-  (def first-build-settings (settings srcdir: "~/src/gerbil-build/"))
+  <<prep-import-module>>
+
+  <<source-path>>
+
+  <<base-outputs>>
+
+  <<gsc-compile-opts>>
+
+  <<gxc-compile-file>>
+
+  (def (set-loadpath settings)
+    (let* ((loadpath (getenv "GERBIL_LOAD_PATH" #f))
+           (loapath (if loadpath (string-append loadpath ":") ""))
+           (loadpath (string-append (or loadpath "") (settings-srcdir settings))))
+      (setenv "GERBIL_LOAD_PATH" loadpath)))
+
+  (def (prep-mod mod settings (reload? #f))
+    (prep-import-module                   ;
+     (source-path mod ".ss" settings)
+     srcdir: (settings-srcdir settings)
+     package: (settings-package settings)
+     namespace: (settings-namespace settings)
+     reload?))
+
+  (def (build-mods mods (srcdir (path-normalize (path-directory (this-source-file)))))
+    (def settings (make-settings srcdir: srcdir verbose: #t))
+    (set-loadpath settings)
+
+    (def (build-mod mod) (message "building " mod)
+      (prep-mod mod settings)
+      (gxc-compile-file mod [] settings))
+
+
+    (message "Builings Mods " mods)
+
+    (let build ((ms mods))
+      (unless (null? ms)
+        (build-mod (car ms)) (build (cdr ms)))))
+#+end_src
+
+#+begin_src gerbil :tangle ./test/build1.ss :noweb yes :shebang "#!/usr/bin/env gxi"
+
+  (def +this-file+ (this-source-file))
+  (def +this-srcdir+ (path-normalize (path-directory +this-file+)))
+
+  (current-directory +this-srcdir+)
+  (load "test-bootstrap1.ss")
 
   (def mods
     '("make/base" "make/settings" "make/expander-module" "make/mod"))
 
-  (let lp ((ms mods))
-    (let ((mod (car ms))
-          (settings first-build-settings))
-       (import-module
-       (source-path mod ".ss" settings) #t)
-      ;; (prep-import-module                 ;
-      ;;  (source-path mod ".ss" settings)
-      ;;  srcdir: (settings-srcdir settings)
-      ;;  package: (settings-package settings)
-      ;;  namespace: (settings-namespace settings))
-       ;(make-ss (source-path mod ".ss" settings))
-      (unless (null? (cdr ms)) (lp (cdr ms)))))
+  (def +mod-src-dir+ (path-expand ".." +this-srcdir+ ))
+
+  (current-directory +mod-src-dir+)
+
+  (message "srcdir " +mod-src-dir+)
+
+  (build-mods mods +mod-src-dir+)
+
 #+end_src
 
 
  #+begin_src shell :results output code
    rm -rf ~/.gerbil/lib/std/make/*
-   gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
-       -e '(load "~/src/gerbil-build/test/test-make-gxc.ss")' \
-       -e '(load "~/src/gerbil-build/test/import.ss")' \
-       -e '(load "~/src/gerbil-build/test/test-first-build.ss")
-   '
+   ~/src/gerbil-build/test/build1.ss
  #+end_src
 
- #+RESULTS:
  #+begin_src shell
- ,*** ERROR IN gx#core-expand-import%__% -- Syntax Error
- ,*** ERROR IN "make/mod.ss"@2.9
- --- Syntax Error: Cannot find library module
- ... form:   :drewc/make/expander-module
- > 
- ,*** EOF again to exit
+ srcdir /home/user/src/gerbil-build/test/..
+ Builings Mods (make/base make/settings make/expander-module make/mod)
+ building make/base
+ ... compile-file make/base
+ building make/settings
+ ... compile-file make/settings
+ building make/expander-module
+ ... compile-file make/expander-module
+ building make/mod
+ ... compile-file make/mod
  #+end_src
 
  #+RESULTS:
@@ -1076,7 +1159,7 @@ The three things we care about are the id, the namespace, and the ...?
     (def ht (make-hash-table-eq)) ; dependencies found so far, so we only find them once
     (def q (make-queue)) ; queue of objects to unwrap to find the dependencies
     (def mod ; load the source file with srcdir in the load-path for dependencies, extract the module
-      (with-cons-load-path (cut import-module file) (settings-srcdir settings)))
+      (with-cons-load-path (cut import-module file #t) (settings-srcdir settings)))
     (def mod-id (expander-context-id mod)) ; id of the module we're interested in
     ;; (def (consider m)
     ;;   (alet (id (expander-context-id m)) ; maybe it's root (#f), then stop.
@@ -1097,6 +1180,8 @@ The three things we care about are the id, the namespace, and the ...?
     ;;      ((import-set? hd)      (enqueue! q (import-set-source hd)))
     ;;      (else (error "Unexpected module import" hd)))))
     ;; (values mod-id (sort (hash-keys ht) symbol<?))
+
+    mod-id
 
 
 

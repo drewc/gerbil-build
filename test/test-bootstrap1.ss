@@ -1,4 +1,5 @@
-(import :std/misc/path)
+(import :std/misc/path :std/misc/list :gerbil/compiler)
+
 ;;; Settings: see details in doc/reference/make.md
 (defstruct settings
   (srcdir libdir bindir force optimize debug static
@@ -7,6 +8,9 @@
 
 (def current-make-settings (make-parameter #f))
 
+(def (settings-verbose>=? settings level)
+  (def verbose (settings-verbose settings))
+  (and (real? level) (real? verbose) (>= verbose level)))
 (def (gerbil-build-cores)
   (with-catch (lambda (_) (##cpu-count)) (lambda () (string->number (getenv "GERBIL_BUILD_CORES")))))
 
@@ -123,25 +127,55 @@
 (def (source-path mod ext settings)
   (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
 
-(def first-build-settings (settings srcdir: "~/src/gerbil-build/"))
+(def (force-outputs) (force-output (current-error-port)) (force-output)) ;; move to std/misc/ports ?
+(def (message . lst) (apply displayln lst) (force-outputs)) ;; move to std/misc/ports ?
 
-(def (setloadpath settings)
+(def (gsc-compile-opts opts)
+  (match opts
+    ([[plist ...] . rest] (listify rest))
+    (_ (listify opts))))
+
+(def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+  (message "... compile-file " mod)
+  (def gsc-opts (gsc-compile-opts opts))
+  (def srcpath (source-path mod ".ss" settings))
+  (let ((gxc-opts
+         [invoke-gsc: invoke-gsc?
+                      keep-scm: (not invoke-gsc?)
+                      output-dir: (settings-libdir settings)
+                      optimize: (settings-optimize settings)
+                      debug: (settings-debug settings)
+                      generate-ssxi: #t
+                      static: (settings-static settings)
+                      verbose: (settings-verbose>=? settings 9)
+                      (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+    (compile-file srcpath gxc-opts)))
+
+(def (set-loadpath settings)
   (let* ((loadpath (getenv "GERBIL_LOAD_PATH" #f))
          (loapath (if loadpath (string-append loadpath ":") ""))
          (loadpath (string-append (or loadpath "") (settings-srcdir settings))))
     (setenv "GERBIL_LOAD_PATH" loadpath)))
 
 (def (prep-mod mod settings (reload? #f))
-  (prep-import-module                 ;
+  (prep-import-module                   ;
    (source-path mod ".ss" settings)
    srcdir: (settings-srcdir settings)
    package: (settings-package settings)
    namespace: (settings-namespace settings)
    reload?))
 
+(def (build-mods mods (srcdir (path-normalize (path-directory (this-source-file)))))
+  (def settings (make-settings srcdir: srcdir verbose: #t))
+  (set-loadpath settings)
 
-(def mods
-  '("make/base" "make/settings" "make/expander-module" "make/mod"))
+  (def (build-mod mod) (message "building " mod)
+    (prep-mod mod settings)
+   (gxc-compile-file mod [] settings)
+    )
 
-(setloadpath first-build-settings)
-(map (cut prep-mod <> first-build-settings) mods)
+
+  (message "Builings Mods " mods)
+   (let build ((ms mods))
+     (unless (null? ms)
+       (build-mod (car ms)) (build (cdr ms)))))

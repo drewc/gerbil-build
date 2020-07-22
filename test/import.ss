@@ -52,7 +52,8 @@
                (ctx
                 (gx#make-module-context module-id prelude module-ns path))
                (body
-                (gx#core-expand-module-begin body ctx))
+               ; (gx#core-expand-module-begin body ctx)
+                [])
                (body
                 (gx#core-quote-syntax
                  (gx#core-cons '%#begin body)
