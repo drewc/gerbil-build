@@ -22,9 +22,3 @@ package: std/make
   (let loop ((i 0)) (when (< i l) (begin (f i (vector-ref v i)) (loop (+ 1 i))))))
 (def (vector-ensure-ref v i f)
   (or (vector-ref v i) (let ((x (f))) (vector-set! v i x) x)))
-
-
-(def (gsc-compile-opts opts)
-  (match opts
-    ([[plist ...] . rest] (listify rest))
-    (_ (listify opts))))
