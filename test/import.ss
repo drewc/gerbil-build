@@ -52,14 +52,13 @@
                (ctx
                 (gx#make-module-context module-id prelude module-ns path))
                (body
-               ; (gx#core-expand-module-begin body ctx)
-                [])
+               (gx#core-expand-module-begin body ctx))
                (body
                 (gx#core-quote-syntax
                  (gx#core-cons '%#begin body)
                  path ctx [])))
-          ;; (set! (gx#&module-context-e ctx)
-          ;;   (delay (gx#eval-syntax* body)))
+           (set! (gx#&module-context-e ctx)
+             (delay (gx#eval-syntax* body)))
           (set! (gx#&module-context-code ctx)
             body)
           (hash-put! (gx#current-expander-module-registry) path ctx)

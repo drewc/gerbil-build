@@ -40,14 +40,14 @@ Perhaps. For now we'll simple inline things as the thoughts spring up.
 
 Let us create a file, compile to the right spot, and run it.
 
-#+begin_src gerbil :tangle "./test/hello.ss" :mkdir yes
+#+begin_src scheme :tangle "./test/hello.ss" :mkdir yes
 package: drewc
 (export hello)
 
 (def (hello) "Hello World")
 #+end_src
 
-#+begin_src gerbil :tangle test/make1.ss
+#+begin_src scheme :tangle test/make1.ss
   (import :gerbil/compiler :std/srfi/13)
   ;; (export #t)
 
@@ -75,7 +75,7 @@ package: drewc
 
 Test it out.
 
-#+begin_src gerbil :tangle test/test-hello.ss
+#+begin_src scheme :tangle test/test-hello.ss
   (import :drewc/hello :std/test)
   (check (hello) => "Hello World")
 
@@ -104,13 +104,13 @@ compile ~/.gerbil/lib/drewc/hello.ssi
 *** No package?
 
 What happens if it has no package?
-#+begin_src gerbil :tangle "./test/hello-no-package.ss" :mkdir yes
+#+begin_src scheme :tangle "./test/hello-no-package.ss" :mkdir yes
 (export hello)
 
 (def (hello) "Hello World... NOT!")
 #+end_src
 
-#+begin_src gerbil :tangle test/test-hello-no-package.ss
+#+begin_src scheme :tangle test/test-hello-no-package.ss
   (import :hello-no-package :std/test)
   (check (hello) => "Hello World... NOT!")
 #+end_src
@@ -135,7 +135,7 @@ compile ~/.gerbil/lib/hello-no-package.ssi
 
 ** Step 2: Crib ~gxc-compile~ from Fare
 
-#+begin_src gerbil :noweb-ref make-gxc-imports
+#+begin_src scheme :noweb-ref make-gxc-imports
   (import :gerbil/compiler :std/misc/path :std/misc/list
         :std/misc/concurrent-plan)
 #+end_src
@@ -144,7 +144,7 @@ compile ~/.gerbil/lib/hello-no-package.ssi
  We need a ~settings~ struct to start off with. We'll make it almost identical
  save for renaming ~prefix~ to ~package~.
 
- #+begin_src gerbil :noweb-ref settings-struct
+ #+begin_src scheme :noweb-ref settings-struct
     ;;; Settings: see details in doc/reference/make.md
     (defstruct settings
       (srcdir libdir bindir package force optimize debug static static-debug verbose build-deps
@@ -156,7 +156,7 @@ compile ~/.gerbil/lib/hello-no-package.ssi
 
  One of the reasons behind this is to use many cores while compiling.
 
- #+begin_src gerbil :noweb-ref gerbil-build-cores
+ #+begin_src scheme :noweb-ref gerbil-build-cores
    (def (gerbil-build-cores)
      (with-catch (lambda (_) (##cpu-count)) (lambda () (string->number (getenv "GERBIL_BUILD_CORES")))))
  #+end_src
@@ -164,7 +164,7 @@ compile ~/.gerbil/lib/hello-no-package.ssi
  In the init things need to change as well.
 
 
- #+begin_src gerbil :noweb-ref settings-init
+ #+begin_src scheme :noweb-ref settings-init
    (defmethod {:init! settings}
     (lambda (self
         srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
@@ -210,7 +210,7 @@ compile ~/.gerbil/lib/hello-no-package.ssi
 **** Source path
   The first is easy.
 
- #+begin_src gerbil :noweb-ref source-path
+ #+begin_src scheme :noweb-ref source-path
    (def (source-path mod ext settings)
      (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
  #+end_src
@@ -240,18 +240,18 @@ compile ~/.gerbil/lib/hello-no-package.ssi
  Let's add a few test files
 
    A toplevel ~test/gerbil.pkg~
-   #+begin_src gerbil :tangle test/gerbil.pkg
+   #+begin_src scheme :tangle test/gerbil.pkg
    (package: drewc/build-test)
    #+end_src
 
    Another one in ~test/sub/gerbil.pkg~.
-   #+begin_src gerbil :tangle test/sub/gerbil.pkg
+   #+begin_src scheme :tangle test/sub/gerbil.pkg
    (package: drewc/take-on-me)
    #+end_src
 
   A source file ~test/sub/goodbye.ss~
  
-   #+begin_src gerbil :tangle "./test/sub/goodbye.ss"
+   #+begin_src scheme :tangle "./test/sub/goodbye.ss"
    (export gbye)
 
    (def (gbye) "Goodbye World")
@@ -261,7 +261,7 @@ compile ~/.gerbil/lib/hello-no-package.ssi
 
       An ~-id~ is a symbol, a ~-package~ a string.
 
-#+begin_src gerbil :noweb-ref mod-modules
+#+begin_src scheme :noweb-ref mod-modules
   (def mod-modules (make-hash-table)) ;;; cache
   (def (mod-module mod (settings (current-make-settings)) (reload? #f))
     (let (v (hash-ref mod-modules mod (void)))
@@ -285,7 +285,7 @@ correct.
   -  ~"test/sub/goodbyebye:~  :: ~drewc/take-on-me~ is the container from
        ~test/sub/gerbil.pkg~
 
-#+begin_src gerbil :tangle test/test-hello-goodbye.ss
+#+begin_src scheme :tangle test/test-hello-goodbye.ss
   (import :std/test)
   (def test-settings (settings srcdir: "~/src/gerbil-build"))
 
@@ -315,13 +315,13 @@ correct.
   project, what comes up?
 
 
-#+begin_src gerbil :tangle "./test/new-project/new-hello-no-package.ss" :mkdirp yes
+#+begin_src scheme :tangle "./test/new-project/new-hello-no-package.ss" :mkdirp yes
 (export hello)
 (def (hello) "Hello World... New Project!")
 #+end_src
 
 
-#+begin_src gerbil
+#+begin_src scheme
    (import :std/test)
   (def test-new-project-settings (settings srcdir: "~/src/gerbil-build/test/new-project")) 
 
@@ -340,7 +340,7 @@ wonderful thing that makes life so much easier, but does result in some antics.
 As luck would have it, *vyzo* has taken care of the details in
 ~gx#core-read-module~.
 
-#+begin_src gerbil :noweb-ref mod-core-modules
+#+begin_src scheme :noweb-ref mod-core-modules
   (def mod-core-modules (make-hash-table))
   (def (mod-core-module mod (settings (current-make-settings)) (reload? #f))
     ;; => (values prelude module-id module-ns body)
@@ -364,7 +364,7 @@ As luck would have it, *vyzo* has taken care of the details in
 
 With that we can now see that this has no package.
 
-#+begin_src gerbil
+#+begin_src scheme
   (import :std/test)
 
   (def test/new-project-hello-no-package-core-module
@@ -378,7 +378,7 @@ With that we can now see that this has no package.
 
 What happens when we compile that module as is?
 
-#+begin_src gerbil :tangle test/test-compile-as-is.ss
+#+begin_src scheme :tangle test/test-compile-as-is.ss
  (def test-new-project-settings (settings srcdir: "~/src/gerbil-build/test/new-project"))
 
   (def test/new-project-hello-no-package-module
@@ -404,7 +404,7 @@ compile drewc/build-test/new-project/new-hello-no-package
 
 If we set the id to ~new-hello-no-package~, say from the ~core-module-id~?
 
-#+begin_src gerbil :tangle test/test-compile-set-id.ss
+#+begin_src scheme :tangle test/test-compile-set-id.ss
   (def test/new-project-hello-no-package-core-module
       (mod-core-module "new-hello-no-package" test-new-project-settings))
 
@@ -416,7 +416,7 @@ If we set the id to ~new-hello-no-package~, say from the ~core-module-id~?
 
 Awesome! That should now means that it tests out.
 
-#+begin_src gerbil :tangle test/test-new-hello-no-package.ss
+#+begin_src scheme :tangle test/test-new-hello-no-package.ss
 (import :std/test :new-hello-no-package)
 (check (hello) => "Hello World... New Project!")
 #+end_src
@@ -438,7 +438,7 @@ Awesome! That should now means that it tests out.
 
 ***** ~mod-module-id~: Finally, we know where it is and how to set it
 
-#+begin_src gerbil :noweb-ref mod-module-id
+#+begin_src scheme :noweb-ref mod-module-id
   (def (mod-module-id mod (settings (current-make-settings)))
     (let ((mcm (mod-core-module mod settings))
           (sp (settings-package settings)))
@@ -455,7 +455,7 @@ Awesome! That should now means that it tests out.
 
 Yes! Now we can specify where things go based on where they are.
 
-#+begin_src gerbil
+#+begin_src scheme
   (import :std/test)
   (let* ((mod "new-hello-no-package")
          (modn (path-expand mod "new-project"))
@@ -489,7 +489,7 @@ Yes! Now we can specify where things go based on where they are.
 
        When we name a hello something else, we can import it as such.
 
- #+begin_src gerbil :tangle test/test-compile-set-id-to-foobarbaz.ss
+ #+begin_src scheme :tangle test/test-compile-set-id-to-foobarbaz.ss
    (def test/new-project-hello-no-package-core-module
        (mod-core-module "new-hello-no-package" test-new-project-settings))
 
@@ -500,14 +500,14 @@ Yes! Now we can specify where things go based on where they are.
  The issue is that the namespace is not set correctly. For example, the ~test/hello.ss~ file.
 
 
- #+begin_src gerbil
+ #+begin_src scheme
    (import :std/test :drewc/hello)
    (check (drewc/hello#hello) => "Hello World")
  #+end_src
 
  But, for that ~:foobarbaz~ it's quite different.
 
- #+begin_src gerbil :tangle test/test-improper-namespace.ss
+ #+begin_src scheme :tangle test/test-improper-namespace.ss
    (import :std/sugar :std/test :foobarbaz)
    (check (hello) => "Hello World... New Project!")
 
@@ -538,14 +538,14 @@ Yes! Now we can specify where things go based on where they are.
 
  That's because of the ~module-namespace~.
 
- #+begin_src gerbil :noweb-ref module-ns
+ #+begin_src scheme :noweb-ref module-ns
    (def module-ns gx#module-context-ns)
    (def module-ns-set! gx#module-context-ns-set!)
  #+end_src
 
  If we set it, we should get it?
 
- #+begin_src gerbil :tangle test/test-compile-set-id-and-ns-to-foobarbaz.ss
+ #+begin_src scheme :tangle test/test-compile-set-id-and-ns-to-foobarbaz.ss
    (def test/new-project-hello-no-package-core-module
        (mod-core-module "new-hello-no-package" test-new-project-settings))
 
@@ -556,7 +556,7 @@ Yes! Now we can specify where things go based on where they are.
  Here's the test ...
 
 
- #+begin_src gerbil :tangle test/test-proper-namespace.ss
+ #+begin_src scheme :tangle test/test-proper-namespace.ss
    (import :std/sugar :std/test :foobarbaz)
    (check (hello) => "Hello World... New Project!")
 
@@ -574,7 +574,7 @@ Yes! Now we can specify where things go based on where they are.
 
  We'll nick that.
 
- #+begin_src gerbil :noweb-ref prep-module-code
+ #+begin_src scheme :noweb-ref prep-module-code
    (def (prep-module-code module code)
      (gx#core-quote-syntax (gx#core-cons '%#begin code)
     (gx#module-context-path module) module []))
@@ -582,7 +582,7 @@ Yes! Now we can specify where things go based on where they are.
 
  And?
 
- #+begin_src gerbil :tangle test/test-compile-set-body-foobarbaz.ss
+ #+begin_src scheme :tangle test/test-compile-set-body-foobarbaz.ss
    (def test/new-project-hello-no-package-core-module
        (mod-core-module "new-hello-no-package" test-new-project-settings))
 
@@ -599,7 +599,7 @@ Yes! Now we can specify where things go based on where they are.
 
 ***** ~(def module-id [...]~
 
- #+begin_src gerbil :noweb-ref inline-module-id
+ #+begin_src scheme :noweb-ref inline-module-id
    (def module-name (path-strip-directory (path-strip-extension path)))
    (def module-id
      ;; If we provide _id, use it(d)!
@@ -615,7 +615,7 @@ Yes! Now we can specify where things go based on where they are.
 
 ***** ~(def module-ns [...]~
 
- #+begin_src gerbil :noweb-ref inline-module-ns
+ #+begin_src scheme :noweb-ref inline-module-ns
  (def module-ns (or _ns (if (equal? module-name ns) (symbol->string module-id) ns)))
  #+end_src
 
@@ -625,7 +625,7 @@ Yes! Now we can specify where things go based on where they are.
  here and that's that. It also means we get rid of almost all the ~mod-*~ and
  ~mod-core~ code.
 
-  #+begin_src gerbil :tangle :tangle test/import.ss :noweb yes :noweb-ref prep-import-module
+  #+begin_src scheme :tangle :tangle test/import.ss :noweb yes :noweb-ref prep-import-module
         ;;; -*- Gerbil -*-
         ;;; (C) vyzo at hackzen.org, me at drewc.ca
         (import :gerbil/expander/module :std/lazy)
@@ -698,7 +698,7 @@ Yes! Now we can specify where things go based on where they are.
 ***** Time to test!
 
 
- #+begin_src gerbil :tangle test/test-compile-prep-foobarbaz.ss
+ #+begin_src scheme :tangle test/test-compile-prep-foobarbaz.ss
    (import :std/test)
    (def test/foobarbaz-module
      (prep-import-module
@@ -733,7 +733,7 @@ Yes! Now we can specify where things go based on where they are.
  #+end_src
 
 
- #+begin_src gerbil :tangle "./test/new-project/sub/foo.ss" :mkdirp yes
+ #+begin_src scheme :tangle "./test/new-project/sub/foo.ss" :mkdirp yes
  (export hello)
  (def (hello) "Hello World... New Project!")
  #+end_src
@@ -747,7 +747,7 @@ Yes! Now we can specify where things go based on where they are.
 
       Let's unite things. We'll create a ~settings-gerbil.pkg~ accessor.
 
- #+begin_src gerbil :noweb-ref unite-settings-struct
+ #+begin_src scheme :noweb-ref unite-settings-struct
    ;;; Settings: see details in doc/reference/make.md
    (defstruct settings
      (srcdir libdir bindir force optimize debug static
@@ -758,7 +758,7 @@ Yes! Now we can specify where things go based on where they are.
  #+end_src
 
 
- #+begin_src gerbil :noweb-ref unite-settings-init
+ #+begin_src scheme :noweb-ref unite-settings-init
    (def (read-gerbil.pkg-plist srcdir)
      (with-catch
       false (lambda () (call-with-input-file (path-expand "gerbil.pkg" srcdir) read))))
@@ -803,7 +803,7 @@ the same as ~:gerbil/core~."
 --https://cons.io/guide/intro.html#core-gerbil-variants
 
 
- #+begin_src gerbil :tangle "./test/prelude/hello.ss" :mkdirp yes
+ #+begin_src scheme :tangle "./test/prelude/hello.ss" :mkdirp yes
  (export hello)
 
  (def (hello) [list . '("Hello World" 2 3)])
@@ -811,7 +811,7 @@ the same as ~:gerbil/core~."
 
 Without any prelude, that should return a list with a procedure as its member.
 
-#+begin_src gerbil :tangle "./test/prelude-no-prelude.ss"
+#+begin_src scheme :tangle "./test/prelude-no-prelude.ss"
     (def test-no-prelude-settings (settings srcdir: "~/src/gerbil-build/test/prelude"))
 
     (def test/hello-no-prelude-module
@@ -822,7 +822,7 @@ Without any prelude, that should return a list with a procedure as its member.
        namespace: 'np))
 #+end_src
 
-#+begin_src gerbil :tangle ./test/test-prelude-no-prelude.ss
+#+begin_src scheme :tangle ./test/test-prelude-no-prelude.ss
   (import :no-prelude/hello :std/test)
   (check ((car (hello)) (cadr (hello))) => '("Hello World"))
 #+end_src
@@ -835,7 +835,7 @@ It works, of course, because this is nothing new.
 
 Let's set a prelude.
 
- #+begin_src gerbil :tangle "./test/prelude/prehello.ss" :mkdirp yes
+ #+begin_src scheme :tangle "./test/prelude/prehello.ss" :mkdirp yes
  #lang :gerbil/polydactyl
  ;;; does not work? prelude: :gerbil/polydactyl
  (export hello)
@@ -843,7 +843,7 @@ Let's set a prelude.
  (def (hello) [list . ("Hello World" 2 3)])
  #+end_src
 
-#+begin_src gerbil :tangle "./test/no-prelude-prelude.ss"
+#+begin_src scheme :tangle "./test/no-prelude-prelude.ss"
   (def test/hello-no-prelude-prelude-module
     (prep-import-module
      (source-path "prehello" ".ss" test-no-prelude-settings)
@@ -852,7 +852,7 @@ Let's set a prelude.
      namespace: 'np))
 #+end_src
 
-#+begin_src gerbil :tangle ./test/test-no-prelude-prehello.ss
+#+begin_src scheme :tangle ./test/test-no-prelude-prehello.ss
   (import :no-prelude/prehello :std/test)
   (check (car (hello)) =>"Hello World")
 #+end_src
@@ -899,13 +899,13 @@ not worry for now.
     First, a ~base~ where all things spring from. Well, that is to say, after
     pulling the bootstraps.
 
-    #+begin_src gerbil :noweb-ref base-outputs
+    #+begin_src scheme :noweb-ref base-outputs
   (def (force-outputs) (force-output (current-error-port)) (force-output)) ;; move to std/misc/ports ?
   (def (message . lst) (apply displayln lst) (force-outputs)) ;; move to std/misc/ports ?
     #+end_src
 
 
-#+begin_src gerbil :tangle "./make/base.ss" :mkdirp yes :noweb yes
+#+begin_src scheme :tangle "./make/base.ss" :mkdirp yes :noweb yes
   package: std/make
   (import :std/misc/list :gerbil/gambit/ports)
   (export #t)
@@ -933,12 +933,12 @@ not worry for now.
 
 Then the settings.
 
-#+begin_src gerbil :noweb-ref settings-verbose>=?
+#+begin_src scheme :noweb-ref settings-verbose>=?
 (def (settings-verbose>=? settings level)
   (def verbose (settings-verbose settings))
   (and (real? level) (real? verbose) (>= verbose level)))
 #+end_src
-#+begin_src gerbil :noweb yes :tangle "make/settings.ss"
+#+begin_src scheme :noweb yes :tangle "make/settings.ss"
 package: std/make
 (export #t)
 
@@ -953,7 +953,7 @@ package: std/make
 
 Now the expander module.
 
-#+begin_src gerbil :tangle "make/expander-module.ss" :noweb yes
+#+begin_src scheme :tangle "make/expander-module.ss" :noweb yes
   package: std/make
   (import :std/misc/func :gerbil/expander/module :std/lazy)
   (export #t)
@@ -988,7 +988,7 @@ With a ~mod~ we can get an ~expander-module~ which has an
 
 That's what we need for ~library-path~.
 
-#+begin_src gerbil :noweb-ref library-path
+#+begin_src scheme :noweb-ref library-path
   (def (library-path mod ext (settings (current-make-settings)))
     (let (expm (mod-expander-module mod settings))
       (path-expand (path-force-extension mod ext)
@@ -996,7 +996,7 @@ That's what we need for ~library-path~.
                                 (settings-libdir settings)))))
 #+end_src
 
-#+begin_src gerbil :tangle "make/mod.ss" :noweb yes
+#+begin_src scheme :tangle "make/mod.ss" :noweb yes
   package: std/make
   (import ./expander-module :std/make/settings :std/misc/func :std/misc/path)
   (export #t)
@@ -1029,14 +1029,14 @@ That's what we need for ~library-path~.
 
 *** ~gxc-compile-file~: `make;make install`
 
-#+begin_src gerbil :noweb-ref gsc-compile-opts
+#+begin_src scheme :noweb-ref gsc-compile-opts
 (def (gsc-compile-opts opts)
   (match opts
     ([[plist ...] . rest] (listify rest))
     (_ (listify opts))))
 #+end_src
 
-#+begin_src gerbil :noweb-ref gxc-compile-file
+#+begin_src scheme :noweb-ref gxc-compile-file
   (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
     (message "... compile-file " mod)
     (def gsc-opts (gsc-compile-opts opts))
@@ -1062,7 +1062,7 @@ as we have all along.
 
 Because we cannot build ourselves we bootstrap our build.
 
-#+begin_src gerbil :tangle ./test/test-bootstrap1.ss :noweb yes
+#+begin_src scheme :tangle ./test/test-bootstrap1.ss :noweb yes
   (import :std/misc/path :std/misc/list :gerbil/compiler)
 
   <<unite-settings-struct>>
@@ -1112,7 +1112,7 @@ Because we cannot build ourselves we bootstrap our build.
         (build-mod (car ms)) (build (cdr ms)))))
 #+end_src
 
-#+begin_src gerbil :tangle ./test/build1.ss :noweb yes :shebang "#!/usr/bin/env gxi"
+#+begin_src scheme :tangle ./test/build1.ss :noweb yes :shebang "#!/usr/bin/env gxi"
 
   (def +this-file+ (this-source-file))
   (def +this-srcdir+ (path-normalize (path-directory +this-file+)))
@@ -1161,7 +1161,7 @@ compile all the files using ourself.
 
 The ~make/boostrap~ module has the bare minimum needed to make something.
 
-#+begin_src gerbil :tangle ./make/bootstrap.ss :noweb yes
+#+begin_src scheme :tangle ./make/bootstrap.ss :noweb yes
   package: std/make
   namespace: std/make/bootstrap
   (import :std/misc/path :std/misc/list :gerbil/compiler :gerbil/gambit/ports)
@@ -1217,7 +1217,7 @@ The ~make/boostrap~ module has the bare minimum needed to make something.
 
 There's one function that belongs here.
 
-#+begin_src gerbil :tangle make/gsc.ss :noweb yes
+#+begin_src scheme :tangle make/gsc.ss :noweb yes
 package: std/make
 (import :std/misc/list)
 (export gsc-compile-opts)
@@ -1233,7 +1233,7 @@ package: std/make
  idea where ~static-path~ is actually built or used, but that matters not for
  this release.
 
-#+begin_src gerbil :noweb-ref gxc-outputs-no-static
+#+begin_src scheme :noweb-ref gxc-outputs-no-static
 (def (gxc-outputs mod opts settings)
   [(library-path mod ".ssi" settings)
   ; (when/list (settings-static settings) [(static-path mod settings)]) ...
@@ -1241,7 +1241,7 @@ package: std/make
 #+end_src
 
 
- #+begin_src gerbil :tangle make/gxc.ss :noweb yes
+ #+begin_src scheme :tangle make/gxc.ss :noweb yes
  package: std/make
  (import ./base ./settings ./mod ./gsc :std/misc/list :gerbil/compiler)
  (export gxc-compile gxc-outputs)
@@ -1260,7 +1260,7 @@ Essentially we want a short form syntax for making *make/makefiles*, aka
 
 Specs are built.
 
-#+begin_src gerbil :noweb-ref build-only-gxc
+#+begin_src scheme :noweb-ref build-only-gxc
   (def (spec-build spec settings)
     (match spec
       ((? string? modf)
@@ -1284,7 +1284,7 @@ Specs are built.
        (error "Bad buildspec" spec))))
 #+end_src
 
-#+begin_src gerbil :tangle make/spec.ss :noweb yes
+#+begin_src scheme :tangle make/spec.ss :noweb yes
   package: std/make
   (import ./mod ./gxc :std/srfi/1)
   (export #t)
@@ -1356,7 +1356,7 @@ takes place.
 We'll just simply experiment. We error if there is no input, and warn if the
 output "fails".
 
-#+begin_src gerbil :tangle "make/make.ss"
+#+begin_src scheme :tangle "make/make.ss"
   package: std/make
   (import ./spec ./base ./settings)
   (export make)
@@ -1388,7 +1388,7 @@ output "fails".
 
 **** ~/make/script~: A clone of up above.
 
-#+begin_src gerbil :tangle make/script.ss
+#+begin_src scheme :tangle make/script.ss
 ;;; -*- Gerbil -*-
 ;;; (C) vyzo at hackzen.org, me at drewc.ca
 ;;; package build script template
@@ -1418,7 +1418,7 @@ package: std/make
 #+end_src
 **** ~build.ss~: The makefile for making makefiles.
 
-#+begin_src gerbil :shebang "#!/usr/bin/env gxi" :tangle build.ss
+#+begin_src scheme :shebang "#!/usr/bin/env gxi" :tangle build.ss
   (import :gerbil/expander :std/misc/path )
 
   (def this-file (this-source-file))
@@ -1439,9 +1439,9 @@ package: std/make
 
    This is just simple. There's a lot more to come but prerelease means only this.
 
-#+begin_src gerbil :tangle test/build.ss :shebang "#!/usr/bin/env gxi"
-(import :std/make/script)
-(defmake-script ["hello"] verbose: 10)
+#+begin_src scheme :tangle test/build.ss :shebang "#!/usr/bin/env gxi"
+  (import :std/make/script)
+  (defmake-script ["hello"] verbose: 10)
 #+end_src
 
 #+begin_src shell :results output code
@@ -1465,10 +1465,10 @@ compile ~/.gerbil/lib/drewc/hello.ssxi.ss
 build result #!void for hello
 #+end_src
 
-#+begin_src gerbil :tangle test/make-script.ss
-(import :drewc/hello :std/test)
+#+begin_src scheme :tangle test/make-script.ss
+  (import :drewc/hello :std/test)
 
-(check (drewc/hello#hello) => "Hello World")
+  (check (drewc/hello#hello) => "Hello World")
 #+end_src
 
 #+begin_src shell
@@ -1481,7 +1481,7 @@ gxi -e '(load "~/src/gerbil-build/test/make-script.ss")'
 * Appendicitis
 
 
-#+begin_src gerbil :noweb yes :tangle test/test-make-gxc.ss
+#+begin_src scheme :noweb yes :tangle test/test-make-gxc.ss
   <<make-gxc-imports>>
 
   <<settings-struct>>

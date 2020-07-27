@@ -101,14 +101,13 @@
                (ctx
                 (gx#make-module-context module-id prelude module-ns path))
                (body
-               ; (gx#core-expand-module-begin body ctx)
-                [])
+               (gx#core-expand-module-begin body ctx))
                (body
                 (gx#core-quote-syntax
                  (gx#core-cons '%#begin body)
                  path ctx [])))
-          ;; (set! (gx#&module-context-e ctx)
-          ;;   (delay (gx#eval-syntax* body)))
+           (set! (gx#&module-context-e ctx)
+             (delay (gx#eval-syntax* body)))
           (set! (gx#&module-context-code ctx)
             body)
           (hash-put! (gx#current-expander-module-registry) path ctx)
@@ -171,11 +170,11 @@
 
   (def (build-mod mod) (message "building " mod)
     (prep-mod mod settings)
-   (gxc-compile-file mod [] settings)
-    )
+    (gxc-compile-file mod [] settings))
 
 
   (message "Builings Mods " mods)
-   (let build ((ms mods))
-     (unless (null? ms)
-       (build-mod (car ms)) (build (cdr ms)))))
+
+  (let build ((ms mods))
+    (unless (null? ms)
+      (build-mod (car ms)) (build (cdr ms)))))
