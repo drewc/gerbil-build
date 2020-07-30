@@ -1,0 +1,2624 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-07-30 Thu 20:43 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Building Gerbil Modules and Packages</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Drew Crampsie" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+// @license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&amp;dn=gpl-3.0.txt GPL-v3-or-Later
+<!--/*--><![CDATA[/*><!--*/
+     function CodeHighlightOn(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.cacheClassElem = elem.className;
+         elem.cacheClassTarget = target.className;
+         target.className = "code-highlighted";
+         elem.className   = "code-highlighted";
+       }
+     }
+     function CodeHighlightOff(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(elem.cacheClassElem)
+         elem.className = elem.cacheClassElem;
+       if(elem.cacheClassTarget)
+         target.className = elem.cacheClassTarget;
+     }
+    /*]]>*///-->
+// @license-end
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Building Gerbil Modules and Packages</h1>
+<blockquote>
+<p>
+Drew Crampsie @drewc 14:28
+</p>
+
+<p>
+Ok, dammit, I have so been trying to avoid becoming a major gerbil contributor
+but I think that was self-deprecation mixed with lazy stoner who is overworked
+somewhat already lol &#x2026; not understanding that it saves time and effort to save
+time and effort &#x2026; silly man.
+</p>
+</blockquote>
+
+<p>
+How things are built matters. In order to save time and effort we do not want to
+rebuild everything each character change. At the same time, we want to be
+liberal and not enforce a style or layout upon developers.
+</p>
+
+<div id="outline-container-org18b92b8" class="outline-2">
+<h2 id="org18b92b8"><code>/make/gxc</code> Compile to a made library</h2>
+<div class="outline-text-2" id="text-org18b92b8">
+</div>
+
+<div id="outline-container-org7efc53e" class="outline-3">
+<h3 id="org7efc53e">Step 1: Compile a file to a library</h3>
+<div class="outline-text-3" id="text-org7efc53e">
+<p>
+Let us create a file, compile to the right spot, and run it.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">package: drewc
+(<span style="color: #51afef;">export</span> hello)
+
+(def (hello) <span style="color: #98be65;">"Hello World"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/compiler</span> <span style="color: #c678dd;">:std/srfi/13</span>)
+  <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">(export #t)</span>
+
+  (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+  (def libdir (string-append gerbil-path <span style="color: #98be65;">"/lib"</span>))
+  (def (module-package ctx)
+    (<span style="color: #51afef;">let</span> (id (symbol-&gt;string (gx#expander-context-id ctx)))
+      (<span style="color: #51afef;">cond</span> ((string-rindex id #\/)
+             =&gt; (<span style="color: #51afef;">lambda</span> (x) (substring id <span style="color: #da8548; font-weight: bold;">0</span> x)))
+            (#t <span style="color: #98be65;">""</span>))))
+  (def (ss-file-libdir file)
+    (string-append libdir <span style="color: #98be65;">"/"</span> (module-package (gx#import-module file))))
+
+  (def (make-ss file)
+      (compile-file file
+                    [output-dir:
+                     libdir
+                     invoke-gsc: #t
+                  <span style="color: #5B6268;">;   </span><span style="color: #5B6268;">keep-scm: #f</span>
+                   <span style="color: #5B6268;">;  </span><span style="color: #5B6268;">generate-ssxi: #t</span>
+                     verbose: #t
+                     ]))
+
+</pre>
+</div>
+
+<p>
+Test it out.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:drewc/hello</span> <span style="color: #c678dd;">:std/test</span>)
+  (check (hello) =&gt; <span style="color: #98be65;">"Hello World"</span>)
+
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">  <span style="color: #ECBE7B;">rm</span> ~/.gerbil/lib/drewc/hello*
+  gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/hello.ss")'</span> <span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-hello.ss")'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">compile ~/src/gerbil-build/test/hello.ss
+compile drewc/hello
+compile ~/.gerbil/lib/drewc/hello__0.scm
+invoke gsc <span style="color: #51afef;">(</span>gsc -:i8,f8,-8,t8 ~/.gerbil/lib/drewc/hello__0.scm<span style="color: #51afef;">)</span>
+compile ~/.gerbil/lib/drewc/hello__rt.scm
+invoke gsc <span style="color: #51afef;">(</span>gsc -:i8,f8,-8,t8 ~/.gerbil/lib/drewc/hello__rt.scm<span style="color: #51afef;">)</span>
+compile ~/.gerbil/lib/drewc/hello.ssi
+... check <span style="color: #51afef;">(</span>hello<span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World"</span>
+</pre>
+</div>
+</div>
+
+
+
+<div id="outline-container-orgc614c2c" class="outline-4">
+<h4 id="orgc614c2c">No package?</h4>
+<div class="outline-text-4" id="text-orgc614c2c">
+<p>
+What happens if it has no package?
+</p>
+<div class="org-src-container">
+<pre class="src src-scheme">(<span style="color: #51afef;">export</span> hello)
+
+(def (hello) <span style="color: #98be65;">"Hello World... NOT!"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:hello-no-package</span> <span style="color: #c678dd;">:std/test</span>)
+  (check (hello) =&gt; <span style="color: #98be65;">"Hello World... NOT!"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">  <span style="color: #ECBE7B;">rm</span> ~/.gerbil/lib/hello-no-package*
+  gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/hello-no-package.ss")'</span><span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-hello-no-package.ss")'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">compile ~/src/gerbil-build/test/hello-no-package.ss
+compile hello-no-package
+compile ~/.gerbil/lib/hello-no-package__0.scm
+invoke gsc <span style="color: #51afef;">(</span>gsc -:i8,f8,-8,t8 ~/.gerbil/lib/hello-no-package__0.scm<span style="color: #51afef;">)</span>
+compile ~/.gerbil/lib/hello-no-package__rt.scm
+invoke gsc <span style="color: #51afef;">(</span>gsc -:i8,f8,-8,t8 ~/.gerbil/lib/hello-no-package__rt.scm<span style="color: #51afef;">)</span>
+compile ~/.gerbil/lib/hello-no-package.ssi
+... check <span style="color: #51afef;">(</span>hello<span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World... NOT!"</span>
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5f5879d" class="outline-3">
+<h3 id="org5f5879d">Step 2: Crib <code>gxc-compile</code> from Fare</h3>
+<div class="outline-text-3" id="text-org5f5879d">
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/compiler</span> <span style="color: #c678dd;">:std/misc/path</span> <span style="color: #c678dd;">:std/misc/list</span>
+        <span style="color: #c678dd;">:std/misc/concurrent-plan</span>)
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgf697fae" class="outline-4">
+<h4 id="orgf697fae">The Struct</h4>
+<div class="outline-text-4" id="text-orgf697fae">
+<p>
+We need a <code>settings</code> struct to start off with. We&rsquo;ll make it almost identical
+save for renaming <code>prefix</code> to <code>package</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">    <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Settings: see details in doc/reference/make.md</span>
+    (defstruct settings
+      (srcdir libdir bindir package force optimize debug static static-debug verbose build-deps
+       libdir-prefix parallelize)
+      transparent: #t constructor: <span style="color: #c678dd;">:init!</span>)
+
+   (def current-make-settings (make-parameter #f))
+</pre>
+</div>
+
+<p>
+One of the reasons behind this is to use many cores while compiling.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def (gerbil-build-cores)
+     (with-catch (<span style="color: #51afef;">lambda</span> (_) (##cpu-count)) (<span style="color: #51afef;">lambda</span> () (string-&gt;number (getenv <span style="color: #98be65;">"GERBIL_BUILD_CORES"</span>)))))
+</pre>
+</div>
+
+<p>
+In the init things need to change as well.
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (defmethod {<span style="color: #c678dd;">:init!</span> settings}
+    (<span style="color: #51afef;">lambda</span> (self
+        srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+        package: (package_ #f) force: (force? #f)
+        optimize: (optimize #t) debug: (debug 'env)
+        static: (static #t) static-debug: (static-debug #f)
+        verbose: (verbose #f) build-deps: (build-deps_ #f)
+        parallelize: (parallelize_ #t))
+      (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+      (def srcdir (<span style="color: #51afef;">or</span> srcdir_ (error <span style="color: #98be65;">"srcdir must be specified"</span>)))
+      (def libdir (<span style="color: #51afef;">or</span> libdir_ (path-expand <span style="color: #98be65;">"lib"</span> gerbil-path)))
+      (def bindir (<span style="color: #51afef;">or</span> bindir_ (path-expand <span style="color: #98be65;">"bin"</span> gerbil-path)))
+      (def package (<span style="color: #51afef;">and</span> package_ (<span style="color: #51afef;">if</span> (symbol? package_) (symbol-&gt;string package_) package_)))
+      (def libdir-prefix (<span style="color: #51afef;">if</span> package (path-expand package libdir) libdir))
+      (def build-deps (path-expand (<span style="color: #51afef;">or</span> build-deps_ <span style="color: #98be65;">"build-deps"</span>) srcdir))
+      (def parallelize (<span style="color: #51afef;">if</span> (eq? parallelize_ #t) (gerbil-build-cores) (<span style="color: #51afef;">or</span> parallelize_ <span style="color: #da8548; font-weight: bold;">0</span>)))
+      (struct-instance-init!
+        self
+        srcdir libdir bindir package force? optimize debug static static-debug verbose build-deps
+        libdir-prefix parallelize))
+    rebind: #t)
+</pre>
+</div>
+
+<p>
+Now for the compilations. Rather than have it all chunked together I&rsquo;ll break it
+into parts I can grasp a wee bit more.
+</p>
+</div>
+</div>
+
+<div id="outline-container-gxc_outputs_begin" class="outline-4">
+<h4 id="gxc_outputs_begin"><code>gxc-outputs</code>: the end of the beginning</h4>
+<div class="outline-text-4" id="text-gxc_outputs_begin">
+<p>
+Strangely enough, it seems that the entire reason I started this was an error
+that may get taken care of by redefining <code>gxc-outputs</code>.
+</p>
+
+<p>
+Essentially, I want to return a list of the files <code>gxc</code> transpiles to, and any
+static files that are output.
+</p>
+
+<p>
+I need to know a few paths
+</p>
+<ol class="org-ol">
+<li>The source code path</li>
+<li>The library path</li>
+<li>The static path</li>
+</ol>
+</div>
+
+<ul class="org-ul">
+<li><a id="org6cb30f1"></a>Source path<br />
+<div class="outline-text-5" id="text-org6cb30f1">
+<p>
+The first is easy.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def (source-path mod ext settings)
+     (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="org94c46d9"></a>Library Path and Packages: The end all be all<br />
+<div class="outline-text-5" id="text-org94c46d9">
+<p>
+The compiler can put the compiled files in different locations that all depend
+on the package of that source file.
+</p>
+
+<p>
+We call a source file a <code>mod</code>. This is a string like &ldquo;test/hello&rdquo;.
+</p>
+
+<p>
+Every source file compiled by <code>gxc</code> is also a <a href="https://github.com/vyzo/gerbil/blob/master/src/gerbil/expander/module.ss">module</a>. It may have a different
+super-package based on the <code>package:</code> keyword in the file or in a local or
+parent <code>gerbil.pkg</code>.
+</p>
+
+<p>
+The packages postfix to the library path then together they prefix the result
+location. It also may not exist.
+</p>
+
+<p>
+These are how they are discovered, in order.
+</p>
+
+<ol class="org-ol">
+<li>The <code>module-id</code> of the module, or..</li>
+<li>The <code>gerbil.pkg</code> in the directory containing the source file itself OR any
+parent directories up to <code>srcdir:</code>. If not&#x2026;</li>
+<li>The <code>package:</code> option to the make <code>settings</code>.</li>
+</ol>
+
+
+<p>
+Let&rsquo;s add a few test files
+</p>
+
+<p>
+A toplevel <code>test/gerbil.pkg</code>
+</p>
+<div class="org-src-container">
+<pre class="src src-scheme">   (package: drewc/build-test)
+</pre>
+</div>
+
+<p>
+Another one in <code>test/sub/gerbil.pkg</code>.
+</p>
+<div class="org-src-container">
+<pre class="src src-scheme">   (package: drewc/take-on-me)
+</pre>
+</div>
+
+<p>
+A source file <code>test/sub/goodbye.ss</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (<span style="color: #51afef;">export</span> gbye)
+
+   (def (gbye) <span style="color: #98be65;">"Goodbye World"</span>)
+</pre>
+</div>
+</div>
+
+<ul class="org-ul">
+<li><a id="orgca3b474"></a><code>mod-module</code>: Every <code>.ss</code> is a module<br />
+<div class="outline-text-6" id="text-orgca3b474">
+<p>
+An <code>-id</code> is a symbol, a <code>-package</code> a string.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def mod-modules (make-hash-table)) <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">cache</span>
+  (def (mod-module mod (settings (current-make-settings)) (reload? #f))
+    (<span style="color: #51afef;">let</span> (v (hash-ref mod-modules mod (void)))
+      (<span style="color: #51afef;">if</span> (<span style="color: #51afef;">and</span> (not (void? v)) (not reload?)) v
+          (<span style="color: #51afef;">let*</span> ((src (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+                 (m (<span style="color: #51afef;">and</span> (file-exists? src) (gx#import-module src reload?))))
+            (begin0 m (hash-put! mod-modules mod m))))))
+
+  (def module-id gx#expander-context-id)
+  (def module-id-set! gx#expander-context-id-set!)
+</pre>
+</div>
+
+<p>
+(For our <code>"test/hello"</code> mod, <code>test/sub/gbye</code> and <code>"test/hello-no-package"</code>, it is
+correct.
+</p>
+
+<dl class="org-dl">
+<dt><code>"test/hello"</code></dt><dd>has <code>package: drewc</code> at the top. That defines the
+containing package as <code>drewc</code>, and since this file is
+called <code>hello</code>, the id is <code>drewc/hello</code>.</dd>
+<dt><code>"test/hello-no-package"</code></dt><dd>It is <code>drewc/build-test/hello-no-package</code> with the
+prefix coming from the <code>test/gerbil.pkg</code></dd>
+<dt><code>"test/sub/goodbyebye:</code> </dt><dd><code>drewc/take-on-me</code> is the container from
+<code>test/sub/gerbil.pkg</code></dd>
+</dl>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span>)
+  (def test-settings (settings srcdir: <span style="color: #98be65;">"~/src/gerbil-build"</span>))
+
+  (def test/hello-module (mod-module <span style="color: #98be65;">"test/hello"</span> test-settings))
+  (def test/sub/goodbye-module (mod-module <span style="color: #98be65;">"test/sub/goodbye"</span> test-settings #t))
+  (def test/hello-no-package-module (mod-module <span style="color: #98be65;">"test/hello-no-package"</span> test-settings))
+
+  (check (module-id test/hello-module) =&gt; 'drewc/hello)
+  (check (module-id test/sub/goodbye-module) =&gt; 'drewc/take-on-me/goodbye)
+  (check (module-id test/hello-no-package-module)
+         =&gt; 'drewc/build-test/hello-no-package)
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="org5a4844a"></a><code>mod-core-module</code>: The module has no root<br />
+<div class="outline-text-6" id="text-org5a4844a">
+<p>
+Finding the actual package can be a problem if we have it laid out on the
+filesystem where any of the parents have a <code>gerbil.pkg</code>.
+</p>
+
+<p>
+For example, a git subtree that you want to build should not change based on
+the fact that you store it in another directory.
+</p>
+
+<p>
+We&rsquo;ll lay out a new project and a file like this:
+</p>
+
+<p>
+<b>./test/new-project/hello-no-package.ss</b>
+</p>
+
+<p>
+Now, without any package and without a <code>gerbil.pkg</code>, when we try to make that
+project, what comes up?
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">(<span style="color: #51afef;">export</span> hello)
+(def (hello) <span style="color: #98be65;">"Hello World... New Project!"</span>)
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span>)
+  (def test-new-project-settings (settings srcdir: <span style="color: #98be65;">"~/src/gerbil-build/test/new-project"</span>)) 
+
+   (def test/new-project-hello-no-package-module
+     (mod-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+
+   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">This passes the test, but fails at what we want</span>
+   (check (module-id test/new-project-hello-no-package-module)
+          =&gt; 'drewc/build-test/new-project/new-hello-no-package)
+</pre>
+</div>
+
+<p>
+The importer always looks towards parent directories for a package. That makes
+sense as it cannot know where to stop and always tried to succeed. That is a
+wonderful thing that makes life so much easier, but does result in some antics.
+</p>
+
+<p>
+As luck would have it, <b>vyzo</b> has taken care of the details in
+<code>gx#core-read-module</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def mod-core-modules (make-hash-table))
+  (def (mod-core-module mod (settings (current-make-settings)) (reload? #f))
+    <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">=&gt; (values prelude module-id module-ns body)</span>
+    (def (mrm)
+      (<span style="color: #51afef;">let</span> (v (<span style="color: #51afef;">if</span> reload? (void) (hash-ref mod-core-modules mod (void))))
+        (<span style="color: #51afef;">if</span> (not (void? v)) v
+            (<span style="color: #51afef;">let*</span> ((src (path-force-extension mod <span style="color: #98be65;">".ss"</span>))
+                   (rm (<span style="color: #51afef;">and</span> (file-exists? src) (gx#core-read-module src))))
+              (begin0 rm (hash-put! mod-core-modules mod rm))))))
+    (<span style="color: #51afef;">let</span> ((srcdir (path-normalize (settings-srcdir settings)))
+          (cd (path-normalize (current-directory))))
+      (<span style="color: #51afef;">if</span> (equal? srcdir cd) (mrm)
+          (<span style="color: #51afef;">parameterize</span> ((current-directory srcdir))
+            (mrm)))))
+
+  (def core-module-prelude (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">0</span>))
+  (def core-module-id (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">1</span>))
+  (def core-module-ns (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">2</span>))
+  (def core-module-code (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">3</span>))
+</pre>
+</div>
+
+<p>
+With that we can now see that this has no package.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span>)
+
+  (def test/new-project-hello-no-package-core-module
+    (mod-core-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+
+  (check (core-module-id test/new-project-hello-no-package-core-module)
+         =&gt; 'new-hello-no-package)
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="orgde574d7"></a>Some testing and asking the compiler where it places things<br />
+<div class="outline-text-6" id="text-orgde574d7">
+<p>
+What happens when we compile that module as is?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"> (def test-new-project-settings (settings srcdir: <span style="color: #98be65;">"~/src/gerbil-build/test/new-project"</span>))
+
+  (def test/new-project-hello-no-package-module
+    (mod-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">  <span style="color: #ECBE7B;">rm</span> ~/.gerbil/lib/drewc/build-test/new-project/new-hello-no-package*
+  gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-make-gxc.ss")'</span> <span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-as-is.ss")'</span> <span style="color: #98be65;">\</span>
+      -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'</span>
+</pre>
+</div>
+
+
+<p>
+It ends up in <b>~/.gerbil/lib/drewc/build-test/new-project/</b>. We knew that.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"><span style="color: #5B6268;"># </span><span style="color: #5B6268;">=&gt; [...]</span>
+compile drewc/build-test/new-project/new-hello-no-package
+</pre>
+</div>
+
+
+<p>
+If we set the id to <code>new-hello-no-package</code>, say from the <code>core-module-id</code>?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def test/new-project-hello-no-package-core-module
+      (mod-core-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+
+  (set! (module-id test/new-project-hello-no-package-module)
+        (core-module-id test/new-project-hello-no-package-core-module))
+</pre>
+</div>
+
+
+
+<p>
+Awesome! That should now means that it tests out.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">(<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span> <span style="color: #c678dd;">:new-hello-no-package</span>)
+(check (hello) =&gt; <span style="color: #98be65;">"Hello World... New Project!"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">    <span style="color: #ECBE7B;">rm</span> ~/.gerbil/lib/drewc/new-hello-no-package*
+    gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+        -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-make-gxc.ss")'</span> <span style="color: #98be65;">\</span>
+        -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-as-is.ss")'</span> <span style="color: #98be65;">\</span>
+        -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-set-id.ss")'</span> <span style="color: #98be65;">\</span>
+        -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'</span> <span style="color: #98be65;">\</span>
+        -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-new-hello-no-package.ss")'</span>
+</pre>
+</div>
+<div class="org-src-container">
+<pre class="src src-shell"><span style="color: #5B6268;"># </span><span style="color: #5B6268;">=&gt;</span>
+... check <span style="color: #51afef;">(</span>hello<span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World... New Project!"</span>
+</pre>
+</div>
+</div>
+</li>
+
+
+<li><a id="orgf7ccf59"></a><code>mod-module-id</code>: Finally, we know where it is and how to set it<br />
+<div class="outline-text-6" id="text-orgf7ccf59">
+<div class="org-src-container">
+<pre class="src src-scheme">  (def (mod-module-id mod (settings (current-make-settings)))
+    (<span style="color: #51afef;">let</span> ((mcm (mod-core-module mod settings))
+          (sp (settings-package settings)))
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+      (<span style="color: #51afef;">if</span> (equal? mod (symbol-&gt;string (core-module-id mcm)))
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the package.</span>
+        (<span style="color: #51afef;">if</span> (not sp) (string-&gt;symbol mod)
+            <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as a super and return</span>
+            (string-&gt;symbol (path-expand mod sp)))
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">Otherwise the mrm has the right id</span>
+        (core-module-id mcm))))
+</pre>
+</div>
+
+<p>
+Yes! Now we can specify where things go based on where they are.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span>)
+  (<span style="color: #51afef;">let*</span> ((mod <span style="color: #98be65;">"new-hello-no-package"</span>)
+         (modn (path-expand mod <span style="color: #98be65;">"new-project"</span>))
+         (modtn (path-expand modn <span style="color: #98be65;">"test"</span>))
+         (newsetdir <span style="color: #98be65;">"~/src/gerbil-build/test/new-project"</span>)
+         (testsetdir
+          (path-directory (path-strip-trailing-directory-separator newsetdir)))
+         (srcsetdir
+          (path-directory (path-strip-trailing-directory-separator testsetdir))))
+
+    <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">make'ing it from that directory should have no container</span>
+
+    (check (mod-module-id mod (settings srcdir: newsetdir)) =&gt; 'new-hello-no-package)
+
+    <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">make'ing it from the parent picks up the parents gerbil.pkg</span>
+
+    (check (mod-module-id modn (settings srcdir: srcsetdir))
+           =&gt; 'drewc/build-test/new-project/new-hello-no-package)
+
+    <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">make'ing it from the parent parent's parent should also picks up the</span>
+    <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">parents gerbil.pkg</span>
+
+    (check (mod-module-id modtn (settings srcdir: testsetdir))
+           =&gt; 'drewc/build-test/new-project/new-hello-no-package))
+</pre>
+</div>
+</div>
+</li>
+</ul>
+</li>
+
+<li><a id="org3255a42"></a><code>namespace:</code> and <code>prelude</code>: Two other things that are set for modules<br />
+<div class="outline-text-5" id="text-org3255a42">
+<p>
+The compiler also picks up those keywords from a parent so that even
+setting the <code>module-id</code> can leave us with some surprises.
+</p>
+
+<p>
+When we name a hello something else, we can import it as such.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def test/new-project-hello-no-package-core-module
+       (mod-core-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+
+   (set! (module-id test/new-project-hello-no-package-module) 'foobarbaz)
+</pre>
+</div>
+
+
+<p>
+The issue is that the namespace is not set correctly. For example, the <code>test/hello.ss</code> file.
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span> <span style="color: #c678dd;">:drewc/hello</span>)
+   (check (drewc/hello#hello) =&gt; <span style="color: #98be65;">"Hello World"</span>)
+</pre>
+</div>
+
+<p>
+But, for that <code>:foobarbaz</code> it&rsquo;s quite different.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/sugar</span> <span style="color: #c678dd;">:std/test</span> <span style="color: #c678dd;">:foobarbaz</span>)
+   (check (hello) =&gt; <span style="color: #98be65;">"Hello World... New Project!"</span>)
+
+   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">This test passes but it shoudn't</span>
+   (check (try (foobarbaz#hello) (catch _ #f)) =&gt; #f)
+
+   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">because it's in another namespace</span>
+   (check (drewc/build-test/new-project/new-hello-no-package#hello)
+          =&gt; <span style="color: #98be65;">"Hello World... New Project!"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">   <span style="color: #ECBE7B;">rm</span> ~/.gerbil/foobarbaz*
+   gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-make-gxc.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-as-is.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-set-id-to-foobarbaz.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'</span><span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-improper-namespace.ss")'</span> <span style="color: #98be65;">\</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell"> <span style="color: #5B6268;"># </span><span style="color: #5B6268;">=&gt;</span>
+ ... check <span style="color: #51afef;">(</span>hello<span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World... New Project!"</span>
+ ... check <span style="color: #51afef;">(</span>try <span style="color: #c678dd;">(</span>foobarbaz#hello<span style="color: #c678dd;">)</span> <span style="color: #c678dd;">(</span>catch _ <span style="color: #5B6268;">#</span><span style="color: #5B6268;">f)) is equal? to #f</span>
+ ... check <span style="color: #98be65;">(</span>drewc/build-test/new-project/new-hello-no-package#hello<span style="color: #98be65;">)</span> is equal? to <span style="color: #98be65;">"Hello World... New Project!"</span>
+</pre>
+</div>
+
+<p>
+That&rsquo;s because of the <code>module-namespace</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def module-ns gx#module-context-ns)
+   (def module-ns-set! gx#module-context-ns-set!)
+</pre>
+</div>
+
+<p>
+If we set it, we should get it?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def test/new-project-hello-no-package-core-module
+       (mod-core-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+
+   (set! (module-id test/new-project-hello-no-package-module) 'foobarbaz)
+   (set! (module-ns test/new-project-hello-no-package-module) <span style="color: #98be65;">"foobarbaz"</span>)
+</pre>
+</div>
+
+<p>
+Here&rsquo;s the test &#x2026;
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/sugar</span> <span style="color: #c678dd;">:std/test</span> <span style="color: #c678dd;">:foobarbaz</span>)
+   (check (hello) =&gt; <span style="color: #98be65;">"Hello World... New Project!"</span>)
+
+   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">This test passes!</span>
+
+   (check (foobarbaz#hello) =&gt; <span style="color: #98be65;">"Hello World... New Project!"</span>)
+
+   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">because it's not in another namespace</span>
+   (check (try (drewc/build-test/new-project/new-hello-no-package#hello)
+            (catch _ #f)) =&gt; #f)
+</pre>
+</div>
+
+<p>
+&#x2026; but our test seems to fail. I think that&rsquo;s because the body is <a href="https://github.com/vyzo/gerbil/blob/master/src/gerbil/expander/module.ss#L173">set before</a> we
+set the namespace.
+</p>
+
+<p>
+We&rsquo;ll nick that.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def (prep-module-code module code)
+     (gx#core-quote-syntax (gx#core-cons '%#begin code)
+    (gx#module-context-path module) module []))
+</pre>
+</div>
+
+<p>
+And?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def test/new-project-hello-no-package-core-module
+       (mod-core-module <span style="color: #98be65;">"new-hello-no-package"</span> test-new-project-settings))
+
+   (set! (module-id test/new-project-hello-no-package-module) 'foobarbaz)
+   (set! (module-ns test/new-project-hello-no-package-module) <span style="color: #98be65;">"foobarbaz"</span>)
+
+   (set! (gx#&amp;module-context-code test/new-project-hello-no-package-module)
+     (prep-module-code test/new-project-hello-no-package-module (core-module-code test/new-project-hello-no-package-core-module)))
+
+</pre>
+</div>
+
+
+<p>
+Nope, still doesn&rsquo;t work. That&rsquo;s ok, the code knows.
+</p>
+</div>
+
+<ul class="org-ul">
+<li><a id="orgec0ef1c"></a><code>(def module-id [...]</code><br />
+<div class="outline-text-6" id="text-orgec0ef1c">
+<div class="org-src-container">
+<pre class="src src-scheme">   (def module-name (path-strip-directory (path-strip-extension path)))
+   (def module-id
+     <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we provide _id, use it(d)!</span>
+     (<span style="color: #51afef;">or</span> _id
+       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+       (<span style="color: #51afef;">if</span> (not (equal? module-name (symbol-&gt;string id))) id
+         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the id.</span>
+         (<span style="color: #51afef;">if</span> (not _package) id
+             <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as the package as a supercontainer and return</span>
+             (string-&gt;symbol (path-expand module-name (symbol-&gt;string _package)))))))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="org0094410"></a><code>(def module-ns [...]</code><br />
+<div class="outline-text-6" id="text-org0094410">
+<div class="org-src-container">
+<pre class="src src-scheme"> (def module-ns (<span style="color: #51afef;">or</span> _ns (<span style="color: #51afef;">if</span> (equal? module-name ns) (symbol-&gt;string module-id) ns)))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="org99b5679"></a><code>prep-import-module</code><br />
+<div class="outline-text-6" id="text-org99b5679">
+<p>
+This <a href="https://github.com/vyzo/gerbil/blob/master/src/gerbil/expander/module.ss#L257">is cribbed as well</a>. Because the compiler does not re-import it, we set it
+here and that&rsquo;s that. It also means we get rid of almost all the <code>mod-*</code> and
+<code>mod-core</code> code.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">        <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">-*- Gerbil -*-</span>
+        <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">(C) vyzo at hackzen.org, me at drewc.ca</span>
+        (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/expander/module</span> <span style="color: #c678dd;">:std/lazy</span>)
+        (def (prep-import-module
+              rpath
+              srcdir: (srcdir <span style="color: #98be65;">"/"</span>)
+              package: (_package #f)
+              id: (_id #f)
+              namespace: (_ns #f)
+              pre: (_pre #f)
+              (reload? #f))
+
+          (def (import-source path)
+            (def mod-path (path-normalize path (<span style="color: #51afef;">or</span> srcdir #f) (<span style="color: #51afef;">or</span> srcdir <span style="color: #98be65;">""</span>)))
+
+            (<span style="color: #51afef;">when</span> (member path (gx#current-expander-path))
+              (error <span style="color: #98be65;">"Cyclic expansion"</span> path))
+            (<span style="color: #51afef;">parameterize</span> ((gx#current-expander-context (gx#core-context-root))
+                           (gx#current-expander-marks [])
+                           (gx#current-expander-phi <span style="color: #da8548; font-weight: bold;">0</span>)
+                           (gx#current-expander-path
+                            (cons path (gx#current-expander-path)))
+                           (gx#current-import-expander-phi #f)
+                           (gx#current-export-expander-phi #f))
+              (<span style="color: #51afef;">let-values</span> (((pre id ns body)
+                            (gx#core-read-module mod-path)))
+                   (def module-name (path-strip-directory (path-strip-extension path)))
+                   (def module-id
+                     <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we provide _id, use it(d)!</span>
+                     (<span style="color: #51afef;">or</span> _id
+                       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+                       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+                       (<span style="color: #51afef;">if</span> (not (equal? module-name (symbol-&gt;string id))) id
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the id.</span>
+                         (<span style="color: #51afef;">if</span> (not _package) id
+                             <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as the package as a supercontainer and return</span>
+                             (string-&gt;symbol (path-expand module-name (symbol-&gt;string _package)))))))
+                 (def module-ns (<span style="color: #51afef;">or</span> _ns (<span style="color: #51afef;">if</span> (equal? module-name ns) (symbol-&gt;string module-id) ns)))
+                (<span style="color: #51afef;">let*</span> ((prelude
+                        (<span style="color: #51afef;">cond</span>
+                         ((gx#prelude-context? pre) pre)
+                         ((gx#module-context? pre)
+                          (gx#core-module-&gt;prelude-context pre))
+                         ((string? pre)
+                          (gx#core-module-&gt;prelude-context
+                           (core-import-module pre)))
+                         ((not pre)
+                          (<span style="color: #51afef;">or</span> (gx#current-expander-module-prelude)
+                              (gx#make-prelude-context #f)))
+                         (<span style="color: #51afef;">else</span>
+                          (error <span style="color: #98be65;">"Cannot import module; unknown prelude"</span> rpath pre))))
+                       (ctx
+                        (gx#make-module-context module-id prelude module-ns path))
+                       (body
+                       (gx#core-expand-module-begin body ctx))
+                       (body
+                        (gx#core-quote-syntax
+                         (gx#core-cons '%#begin body)
+                         path ctx [])))
+                   (set! (gx#&amp;module-context-e ctx)
+                     (<span style="color: #51afef;">delay</span> (gx#eval-syntax* body)))
+                  (set! (gx#&amp;module-context-code ctx)
+                    body)
+                  (hash-put! (gx#current-expander-module-registry) path ctx)
+                  (hash-put! (gx#current-expander-module-registry) id ctx)
+                  ctx))))
+
+          (<span style="color: #51afef;">let</span> (npath (path-normalize rpath #f))
+            (<span style="color: #51afef;">cond</span>
+             ((<span style="color: #51afef;">and</span> (not reload?)
+                   (hash-get (gx#current-expander-module-registry) npath))
+              =&gt; values)
+             (<span style="color: #51afef;">else</span> (<span style="color: #51afef;">parameterize</span> ((current-directory (<span style="color: #51afef;">or</span> srcdir (current-directory))))
+                     (import-source (path-normalize rpath #f)))))))
+
+</pre>
+</div>
+</div>
+</li>
+
+
+
+<li><a id="org4ca78ff"></a>Time to test!<br />
+<div class="outline-text-6" id="text-org4ca78ff">
+<div class="org-src-container">
+<pre class="src src-scheme">   (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/test</span>)
+   (def test/foobarbaz-module
+     (prep-import-module
+      (source-path <span style="color: #98be65;">"new-hello-no-package"</span> <span style="color: #98be65;">".ss"</span> test-new-project-settings)
+      srcdir: (settings-srcdir test-new-project-settings)
+      id: 'foobarbaz #t))
+
+   (check (module-id test/foobarbaz-module) =&gt; 'foobarbaz)
+
+
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">   <span style="color: #ECBE7B;">rm</span> ~/.gerbil/lib/foobarbaz*
+   gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-make-gxc.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/import.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-as-is.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-compile-prep-foobarbaz.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'</span><span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-proper-namespace.ss")'</span> <span style="color: #98be65;">\</span>
+</pre>
+</div>
+
+
+<p>
+Yes! It worked.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"> <span style="color: #5B6268;"># </span><span style="color: #5B6268;">=&gt;</span>
+ ... check <span style="color: #51afef;">(</span>hello<span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World... New Project!"</span>
+ ... check <span style="color: #51afef;">(</span>foobarbaz#hello<span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World... New Project!"</span>
+ ... check <span style="color: #51afef;">(</span>try <span style="color: #c678dd;">(</span>drewc/build-test/new-project/new-hello-no-package#hello<span style="color: #c678dd;">)</span> <span style="color: #c678dd;">(</span>catch _ <span style="color: #5B6268;">#</span><span style="color: #5B6268;">f)) is equal? to #f</span>
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme"> (<span style="color: #51afef;">export</span> hello)
+ (def (hello) <span style="color: #98be65;">"Hello World... New Project!"</span>)
+</pre>
+</div>
+</div>
+</li>
+
+
+<li><a id="org81f996b"></a>Prelude and Postlude: Putting it all together<br />
+<div class="outline-text-6" id="text-org81f996b">
+<p>
+The only thing we&rsquo;re missing is a way to set a prelude in the make
+settings. In fact, we don&rsquo;t set the namespace there either.
+</p>
+
+<p>
+Let&rsquo;s unite things. We&rsquo;ll create a <code>settings-gerbil.pkg</code> accessor.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Settings: see details in doc/reference/make.md</span>
+   (defstruct settings
+     (srcdir libdir bindir force optimize debug static
+             static-debug verbose build-deps parallelize gerbil.pkg)
+     transparent: #t constructor: <span style="color: #c678dd;">:init!</span>)
+
+   (def current-make-settings (make-parameter #f))
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">   (def (read-gerbil.pkg-plist srcdir)
+     (with-catch
+      false (<span style="color: #51afef;">lambda</span> () (<span style="color: #51afef;">call-with-input-file</span> (path-expand <span style="color: #98be65;">"gerbil.pkg"</span> srcdir) read))))
+
+   (defmethod {<span style="color: #c678dd;">:init!</span> settings}
+    (<span style="color: #51afef;">lambda</span> (self
+        srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+        gerbil.pkg: (gxpkg_ #f) force: (force? #f)
+        optimize: (optimize #t) debug: (debug 'env)
+        static: (static #t) static-debug: (static-debug #f)
+        verbose: (verbose #f) build-deps: (build-deps_ #f)
+        parallelize: (parallelize_ #t))
+      (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+      (def srcdir (<span style="color: #51afef;">or</span> srcdir_ (error <span style="color: #98be65;">"srcdir must be specified"</span>)))
+      (def gerbil.pkg (<span style="color: #51afef;">or</span> gxpkg_ (read-gerbil.pkg-plist srcdir_ )))
+      (def libdir (<span style="color: #51afef;">or</span> libdir_ (path-expand <span style="color: #98be65;">"lib"</span> gerbil-path)))
+      (def bindir (<span style="color: #51afef;">or</span> bindir_ (path-expand <span style="color: #98be65;">"bin"</span> gerbil-path)))
+      (def build-deps (path-expand (<span style="color: #51afef;">or</span> build-deps_ <span style="color: #98be65;">"build-deps"</span>) srcdir))
+      (def parallelize (<span style="color: #51afef;">if</span> (eq? parallelize_ #t) (gerbil-build-cores) (<span style="color: #51afef;">or</span> parallelize_ <span style="color: #da8548; font-weight: bold;">0</span>)))
+      (struct-instance-init!
+        self
+        srcdir libdir bindir force? optimize debug static static-debug verbose build-deps
+        parallelize gerbil.pkg))
+      rebind: #t)
+
+   (def (settings-gerbil.pkg-pgetq s k (nope #f))
+     (<span style="color: #51afef;">let</span> (plist (settings-gerbil.pkg s))
+       (<span style="color: #51afef;">if</span> (not plist) nope (pgetq plist k nope))))
+
+   (def settings-package (cut settings-gerbil.pkg-pgetq &lt;&gt; package:))
+   (def settings-namespace (cut settings-gerbil.pkg-pgetq &lt;&gt; namespace:))
+   (def settings-prelude (cut settings-gerbil.pkg-pgetq &lt;&gt; prelude:))
+</pre>
+</div>
+
+
+<p>
+Now that we&rsquo;ve got that taken care of, let&rsquo;s do preludes.
+</p>
+
+<p>
+&ldquo;As of Gerbil <code>v0.16-DEV-259-g13646d64</code> gerbil comes with a custom language
+prelude, <code>:gerbil/polydactyl</code>, that treats square brackets as plain parentheses
+instead of the reader expanding them to @list forms. The language is otherwise
+the same as <code>:gerbil/core</code>.&rdquo;
+--<a href="https://cons.io/guide/intro.html#core-gerbil-variants">https://cons.io/guide/intro.html#core-gerbil-variants</a>
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme"> (<span style="color: #51afef;">export</span> hello)
+
+ (def (hello) [list . '(<span style="color: #98be65;">"Hello World"</span> <span style="color: #da8548; font-weight: bold;">2</span> <span style="color: #da8548; font-weight: bold;">3</span>)])
+</pre>
+</div>
+
+<p>
+Without any prelude, that should return a list with a procedure as its member.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">    (def test-no-prelude-settings (settings srcdir: <span style="color: #98be65;">"~/src/gerbil-build/test/prelude"</span>))
+
+    (def test/hello-no-prelude-module
+      (prep-import-module
+       (source-path <span style="color: #98be65;">"hello"</span> <span style="color: #98be65;">".ss"</span> test-no-prelude-settings)
+       srcdir: (settings-srcdir test-no-prelude-settings)
+       package: 'no-prelude
+       namespace: 'np))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:no-prelude/hello</span> <span style="color: #c678dd;">:std/test</span>)
+  (check ((car (hello)) (cadr (hello))) =&gt; '(<span style="color: #98be65;">"Hello World"</span>))
+</pre>
+</div>
+
+<p>
+It works, of course, because this is nothing new.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"> ... check <span style="color: #51afef;">(</span><span style="color: #c678dd;">(</span>car <span style="color: #98be65;">(</span>np#hello<span style="color: #98be65;">)</span><span style="color: #c678dd;">)</span><span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World"</span>
+</pre>
+</div>
+
+<p>
+Let&rsquo;s set a prelude.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"> #lang <span style="color: #c678dd;">:gerbil/polydactyl</span>
+ <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">does not work? prelude: :gerbil/polydactyl</span>
+ (<span style="color: #51afef;">export</span> hello)
+
+ (def (hello) [list . (<span style="color: #98be65;">"Hello World"</span> <span style="color: #da8548; font-weight: bold;">2</span> <span style="color: #da8548; font-weight: bold;">3</span>)])
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def test/hello-no-prelude-prelude-module
+    (prep-import-module
+     (source-path <span style="color: #98be65;">"prehello"</span> <span style="color: #98be65;">".ss"</span> test-no-prelude-settings)
+     srcdir: (settings-srcdir test-no-prelude-settings)
+     package: 'no-prelude
+     namespace: 'np))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:no-prelude/prehello</span> <span style="color: #c678dd;">:std/test</span>)
+  (check (car (hello)) =&gt;<span style="color: #98be65;">"Hello World"</span>)
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-shell">   <span style="color: #ECBE7B;">rm</span> -rf ~/.gerbil/lib/no-prelude ~/.gerbil/lib/drewc/build-test/prelude/
+   gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make1.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-make-gxc.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/import.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/prelude-no-prelude.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/no-prelude-prelude.ss")'</span> <span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(make-ss "~/src/gerbil-build/test/prelude/prehello.ss")'</span><span style="color: #98be65;">\</span>
+       -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/test-no-prelude-prehello.ss")'</span>
+</pre>
+</div>
+
+<p>
+While it works, it turns out the <code>#lang</code> and <code>prelude:</code> are totally different
+things. While that is a good thing to learn, it also means the build script need
+not worry for now.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"> ... check <span style="color: #51afef;">(</span>car <span style="color: #c678dd;">(</span>hello<span style="color: #c678dd;">)</span><span style="color: #51afef;">)</span> is equal? to <span style="color: #98be65;">"Hello World"</span>
+</pre>
+</div>
+</div>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+<div id="outline-container-org17aa4dc" class="outline-4">
+<h4 id="org17aa4dc">Break into modules</h4>
+<div class="outline-text-4" id="text-org17aa4dc">
+<p>
+Before starting on the major reason behind the last 800 or so LiterateLoC&rsquo;s
+let&rsquo;s start to break things up into parts. This helps to separate the code
+and concerns as well as test itself on itself.
+</p>
+
+<p>
+First, a <code>base</code> where all things spring from. Well, that is to say, after
+pulling the bootstraps.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def (force-outputs) (force-output (current-error-port)) (force-output)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+  (def (message . lst) (apply displayln lst) (force-outputs)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme">  package: std/make
+  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/misc/list</span> <span style="color: #c678dd;">:gerbil/gambit/ports</span>)
+  (<span style="color: #51afef;">export</span> #t)
+
+  (def default-gambit-gsc <span style="color: #98be65;">"gsc"</span>)
+  (def default-gerbil-gxc <span style="color: #98be65;">"gxc"</span>)
+
+  (def (gerbil-gsc)
+    (getenv <span style="color: #98be65;">"GERBIL_GSC"</span> default-gambit-gsc))
+  (def (gerbil-gxc)
+    (getenv <span style="color: #98be65;">"GERBIL_GXC"</span> default-gerbil-gxc))
+
+  <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Functions that should be better moved some library...</span>
+    (def (force-outputs) (force-output (current-error-port)) (force-output)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+    (def (message . lst) (apply displayln lst) (force-outputs)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+  (def (writeln x) (write x) (newline) (force-outputs)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+  (def (prefix/ prefix path) (<span style="color: #51afef;">if</span> prefix (string-append prefix <span style="color: #98be65;">"/"</span> path) path)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/path ?</span>
+
+  <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Functions partially reimplemented from std/srfi/43. See bug #465</span>
+  (def (vector-for-each f v)
+    (def l (vector-length v))
+    (<span style="color: #51afef;">let</span> <span style="color: #c678dd;">loop</span> ((i <span style="color: #da8548; font-weight: bold;">0</span>)) (<span style="color: #51afef;">when</span> (&lt; i l) (<span style="color: #51afef;">begin</span> (f i (vector-ref v i)) (loop (+ <span style="color: #da8548; font-weight: bold;">1</span> i))))))
+  (def (vector-ensure-ref v i f)
+    (<span style="color: #51afef;">or</span> (vector-ref v i) (<span style="color: #51afef;">let</span> ((x (f))) (vector-set! v i x) x)))
+</pre>
+</div>
+
+<p>
+Then the settings.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">(def (settings-verbose&gt;=? settings level)
+  (def verbose (settings-verbose settings))
+  (<span style="color: #51afef;">and</span> (real? level) (real? verbose) (&gt;= verbose level)))
+</pre>
+</div>
+<div class="org-src-container">
+<pre class="src src-scheme">package: std/make
+(<span style="color: #51afef;">export</span> #t)
+
+   <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Settings: see details in doc/reference/make.md</span>
+   (defstruct settings
+     (srcdir libdir bindir force optimize debug static
+             static-debug verbose build-deps parallelize gerbil.pkg)
+     transparent: #t constructor: <span style="color: #c678dd;">:init!</span>)
+
+   (def current-make-settings (make-parameter #f))
+
+   (def (gerbil-build-cores)
+     (with-catch (<span style="color: #51afef;">lambda</span> (_) (##cpu-count)) (<span style="color: #51afef;">lambda</span> () (string-&gt;number (getenv <span style="color: #98be65;">"GERBIL_BUILD_CORES"</span>)))))
+
+   (def (read-gerbil.pkg-plist srcdir)
+     (with-catch
+      false (<span style="color: #51afef;">lambda</span> () (<span style="color: #51afef;">call-with-input-file</span> (path-expand <span style="color: #98be65;">"gerbil.pkg"</span> srcdir) read))))
+
+   (defmethod {<span style="color: #c678dd;">:init!</span> settings}
+    (<span style="color: #51afef;">lambda</span> (self
+        srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+        gerbil.pkg: (gxpkg_ #f) force: (force? #f)
+        optimize: (optimize #t) debug: (debug 'env)
+        static: (static #t) static-debug: (static-debug #f)
+        verbose: (verbose #f) build-deps: (build-deps_ #f)
+        parallelize: (parallelize_ #t))
+      (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+      (def srcdir (<span style="color: #51afef;">or</span> srcdir_ (error <span style="color: #98be65;">"srcdir must be specified"</span>)))
+      (def gerbil.pkg (<span style="color: #51afef;">or</span> gxpkg_ (read-gerbil.pkg-plist srcdir_ )))
+      (def libdir (<span style="color: #51afef;">or</span> libdir_ (path-expand <span style="color: #98be65;">"lib"</span> gerbil-path)))
+      (def bindir (<span style="color: #51afef;">or</span> bindir_ (path-expand <span style="color: #98be65;">"bin"</span> gerbil-path)))
+      (def build-deps (path-expand (<span style="color: #51afef;">or</span> build-deps_ <span style="color: #98be65;">"build-deps"</span>) srcdir))
+      (def parallelize (<span style="color: #51afef;">if</span> (eq? parallelize_ #t) (gerbil-build-cores) (<span style="color: #51afef;">or</span> parallelize_ <span style="color: #da8548; font-weight: bold;">0</span>)))
+      (struct-instance-init!
+        self
+        srcdir libdir bindir force? optimize debug static static-debug verbose build-deps
+        parallelize gerbil.pkg))
+      rebind: #t)
+
+   (def (settings-gerbil.pkg-pgetq s k (nope #f))
+     (<span style="color: #51afef;">let</span> (plist (settings-gerbil.pkg s))
+       (<span style="color: #51afef;">if</span> (not plist) nope (pgetq plist k nope))))
+
+   (def settings-package (cut settings-gerbil.pkg-pgetq &lt;&gt; package:))
+   (def settings-namespace (cut settings-gerbil.pkg-pgetq &lt;&gt; namespace:))
+   (def settings-prelude (cut settings-gerbil.pkg-pgetq &lt;&gt; prelude:))
+
+(def (settings-verbose&gt;=? settings level)
+  (def verbose (settings-verbose settings))
+  (<span style="color: #51afef;">and</span> (real? level) (real? verbose) (&gt;= verbose level)))
+</pre>
+</div>
+
+<p>
+Now the expander module.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  package: std/make
+  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/misc/func</span> <span style="color: #c678dd;">:gerbil/expander/module</span> <span style="color: #c678dd;">:std/lazy</span>)
+  (<span style="color: #51afef;">export</span> #t)
+
+          <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">-*- Gerbil -*-</span>
+          <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">(C) vyzo at hackzen.org, me at drewc.ca</span>
+          (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/expander/module</span> <span style="color: #c678dd;">:std/lazy</span>)
+          (def (prep-import-module
+                rpath
+                srcdir: (srcdir <span style="color: #98be65;">"/"</span>)
+                package: (_package #f)
+                id: (_id #f)
+                namespace: (_ns #f)
+                pre: (_pre #f)
+                (reload? #f))
+  
+            (def (import-source path)
+              (def mod-path (path-normalize path (<span style="color: #51afef;">or</span> srcdir #f) (<span style="color: #51afef;">or</span> srcdir <span style="color: #98be65;">""</span>)))
+  
+              (<span style="color: #51afef;">when</span> (member path (gx#current-expander-path))
+                (error <span style="color: #98be65;">"Cyclic expansion"</span> path))
+              (<span style="color: #51afef;">parameterize</span> ((gx#current-expander-context (gx#core-context-root))
+                             (gx#current-expander-marks [])
+                             (gx#current-expander-phi <span style="color: #da8548; font-weight: bold;">0</span>)
+                             (gx#current-expander-path
+                              (cons path (gx#current-expander-path)))
+                             (gx#current-import-expander-phi #f)
+                             (gx#current-export-expander-phi #f))
+                (<span style="color: #51afef;">let-values</span> (((pre id ns body)
+                              (gx#core-read-module mod-path)))
+                     (def module-name (path-strip-directory (path-strip-extension path)))
+                     (def module-id
+                       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we provide _id, use it(d)!</span>
+                       (<span style="color: #51afef;">or</span> _id
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+                         (<span style="color: #51afef;">if</span> (not (equal? module-name (symbol-&gt;string id))) id
+                           <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the id.</span>
+                           (<span style="color: #51afef;">if</span> (not _package) id
+                               <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as the package as a supercontainer and return</span>
+                               (string-&gt;symbol (path-expand module-name (symbol-&gt;string _package)))))))
+                   (def module-ns (<span style="color: #51afef;">or</span> _ns (<span style="color: #51afef;">if</span> (equal? module-name ns) (symbol-&gt;string module-id) ns)))
+                  (<span style="color: #51afef;">let*</span> ((prelude
+                          (<span style="color: #51afef;">cond</span>
+                           ((gx#prelude-context? pre) pre)
+                           ((gx#module-context? pre)
+                            (gx#core-module-&gt;prelude-context pre))
+                           ((string? pre)
+                            (gx#core-module-&gt;prelude-context
+                             (core-import-module pre)))
+                           ((not pre)
+                            (<span style="color: #51afef;">or</span> (gx#current-expander-module-prelude)
+                                (gx#make-prelude-context #f)))
+                           (<span style="color: #51afef;">else</span>
+                            (error <span style="color: #98be65;">"Cannot import module; unknown prelude"</span> rpath pre))))
+                         (ctx
+                          (gx#make-module-context module-id prelude module-ns path))
+                         (body
+                         (gx#core-expand-module-begin body ctx))
+                         (body
+                          (gx#core-quote-syntax
+                           (gx#core-cons '%#begin body)
+                           path ctx [])))
+                     (set! (gx#&amp;module-context-e ctx)
+                       (<span style="color: #51afef;">delay</span> (gx#eval-syntax* body)))
+                    (set! (gx#&amp;module-context-code ctx)
+                      body)
+                    (hash-put! (gx#current-expander-module-registry) path ctx)
+                    (hash-put! (gx#current-expander-module-registry) id ctx)
+                    ctx))))
+  
+            (<span style="color: #51afef;">let</span> (npath (path-normalize rpath #f))
+              (<span style="color: #51afef;">cond</span>
+               ((<span style="color: #51afef;">and</span> (not reload?)
+                     (hash-get (gx#current-expander-module-registry) npath))
+                =&gt; values)
+               (<span style="color: #51afef;">else</span> (<span style="color: #51afef;">parameterize</span> ((current-directory (<span style="color: #51afef;">or</span> srcdir (current-directory))))
+                       (import-source (path-normalize rpath #f)))))))
+  
+
+  (def expander-module-id gx#expander-context-id)
+
+  (def expander-module-name
+    (compose string-&gt;symbol path-strip-directory
+             symbol-&gt;string expander-module-id))
+
+  (def expander-module-relative-library-directory
+    (compose path-strip-trailing-directory-separator path-directory
+             symbol-&gt;string expander-module-id))
+
+  (def (expander-module-package m)
+    (<span style="color: #51afef;">let</span> (d (expander-module-relative-library-directory m))
+      (<span style="color: #51afef;">if</span> (equal? <span style="color: #98be65;">""</span> d) #f (string-&gt;symbol d))))
+
+
+  (def expander-module-namespace gx#module-context-ns)
+  (def expander-module-prelude gx#&amp;phi-context-super)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org84b1b53" class="outline-4">
+<h4 id="org84b1b53"><code>mod</code>&rsquo;s: Talking &rsquo;bout this generation</h4>
+<div class="outline-text-4" id="text-org84b1b53">
+<p>
+Time for the <code>mod</code>&rsquo;s to rumble. What is a <code>mod</code>? A mod is a string specifying a
+file&rsquo;s name and relative location.
+</p>
+
+<p>
+With a <code>mod</code> we can get an <code>expander-module</code> which has an
+<code>expander-module-relative-library-directory</code>.
+</p>
+
+<p>
+That&rsquo;s what we need for <code>library-path</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def (library-path mod ext (settings (current-make-settings)))
+    (<span style="color: #51afef;">let</span> (expm (mod-expander-module mod settings))
+      (path-expand (path-force-extension mod ext)
+                   (path-expand (expander-module-relative-library-directory expm)
+                                (settings-libdir settings)))))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  package: std/make
+  (<span style="color: #51afef;">import</span> ./expander-module <span style="color: #c678dd;">:std/make/settings</span> <span style="color: #c678dd;">:std/misc/func</span> <span style="color: #c678dd;">:std/misc/path</span>)
+  (<span style="color: #51afef;">export</span> #t)
+
+     (def (source-path mod ext settings)
+       (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
+
+  (def mod-expander-modules (make-hash-table)) <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">cache</span>
+  (def (mod-expander-module mod (settings (current-make-settings)) (reload? #f))
+    (<span style="color: #51afef;">let</span> (v (hash-ref mod-expander-modules mod (void)))
+      (<span style="color: #51afef;">if</span> (<span style="color: #51afef;">and</span> (not (void? v)) (not reload?)) v
+          (<span style="color: #51afef;">let*</span> ((src (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+                 (m (<span style="color: #51afef;">and</span> (file-exists? src)
+                         (prep-import-module
+                          src
+                          srcdir: (settings-srcdir settings)
+                          package: (settings-package settings)
+                          namespace: (settings-namespace settings)
+                          reload?))))
+            (begin0 m (hash-put! mod-expander-modules mod m))))))
+
+    (def (library-path mod ext (settings (current-make-settings)))
+      (<span style="color: #51afef;">let</span> (expm (mod-expander-module mod settings))
+        (path-expand (path-force-extension mod ext)
+                     (path-expand (expander-module-relative-library-directory expm)
+                                  (settings-libdir settings)))))
+
+  (def (static-file-path file settings)
+    (<span style="color: #51afef;">let*</span> ((libdir (settings-libdir settings))
+           (staticdir (path-expand <span style="color: #98be65;">"static"</span> libdir))
+           (filename (path-strip-directory file)))
+      (path-expand filename staticdir)))
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-org58c6f87" class="outline-4">
+<h4 id="org58c6f87"><code>gxc-compile-file</code>: `make;make install`</h4>
+<div class="outline-text-4" id="text-org58c6f87">
+<div class="org-src-container">
+<pre class="src src-scheme">(def (gsc-compile-opts opts)
+  (match opts
+    ([[plist ...] . rest] (listify rest))
+    (_ (listify opts))))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+    (message <span style="color: #98be65;">"... compile-file "</span> mod)
+    (def gsc-opts (gsc-compile-opts opts))
+    (def srcpath (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+    (<span style="color: #51afef;">let</span> ((gxc-opts
+           [invoke-gsc: invoke-gsc?
+                        keep-scm: (not invoke-gsc?)
+                        output-dir: (settings-libdir settings)
+                        optimize: (settings-optimize settings)
+                        debug: (settings-debug settings)
+                        generate-ssxi: #t
+                        static: (settings-static settings)
+                        verbose: (settings-verbose&gt;=? settings <span style="color: #da8548; font-weight: bold;">9</span>)
+                        (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+      (compile-file srcpath gxc-opts)))
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgf91b7f5" class="outline-4">
+<h4 id="orgf91b7f5">bootstrap</h4>
+<div class="outline-text-4" id="text-orgf91b7f5">
+<p>
+Going to have an attempt at building that before there&rsquo;s a function to build it,
+as we have all along.
+</p>
+
+<p>
+Because we cannot build ourselves we bootstrap our build.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/misc/path</span> <span style="color: #c678dd;">:std/misc/list</span> <span style="color: #c678dd;">:gerbil/compiler</span>)
+
+     <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Settings: see details in doc/reference/make.md</span>
+     (defstruct settings
+       (srcdir libdir bindir force optimize debug static
+               static-debug verbose build-deps parallelize gerbil.pkg)
+       transparent: #t constructor: <span style="color: #c678dd;">:init!</span>)
+  
+     (def current-make-settings (make-parameter #f))
+
+  (def (settings-verbose&gt;=? settings level)
+    (def verbose (settings-verbose settings))
+    (<span style="color: #51afef;">and</span> (real? level) (real? verbose) (&gt;= verbose level)))
+     (def (gerbil-build-cores)
+       (with-catch (<span style="color: #51afef;">lambda</span> (_) (##cpu-count)) (<span style="color: #51afef;">lambda</span> () (string-&gt;number (getenv <span style="color: #98be65;">"GERBIL_BUILD_CORES"</span>)))))
+
+     (def (read-gerbil.pkg-plist srcdir)
+       (with-catch
+        false (<span style="color: #51afef;">lambda</span> () (<span style="color: #51afef;">call-with-input-file</span> (path-expand <span style="color: #98be65;">"gerbil.pkg"</span> srcdir) read))))
+  
+     (defmethod {<span style="color: #c678dd;">:init!</span> settings}
+      (<span style="color: #51afef;">lambda</span> (self
+          srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+          gerbil.pkg: (gxpkg_ #f) force: (force? #f)
+          optimize: (optimize #t) debug: (debug 'env)
+          static: (static #t) static-debug: (static-debug #f)
+          verbose: (verbose #f) build-deps: (build-deps_ #f)
+          parallelize: (parallelize_ #t))
+        (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+        (def srcdir (<span style="color: #51afef;">or</span> srcdir_ (error <span style="color: #98be65;">"srcdir must be specified"</span>)))
+        (def gerbil.pkg (<span style="color: #51afef;">or</span> gxpkg_ (read-gerbil.pkg-plist srcdir_ )))
+        (def libdir (<span style="color: #51afef;">or</span> libdir_ (path-expand <span style="color: #98be65;">"lib"</span> gerbil-path)))
+        (def bindir (<span style="color: #51afef;">or</span> bindir_ (path-expand <span style="color: #98be65;">"bin"</span> gerbil-path)))
+        (def build-deps (path-expand (<span style="color: #51afef;">or</span> build-deps_ <span style="color: #98be65;">"build-deps"</span>) srcdir))
+        (def parallelize (<span style="color: #51afef;">if</span> (eq? parallelize_ #t) (gerbil-build-cores) (<span style="color: #51afef;">or</span> parallelize_ <span style="color: #da8548; font-weight: bold;">0</span>)))
+        (struct-instance-init!
+          self
+          srcdir libdir bindir force? optimize debug static static-debug verbose build-deps
+          parallelize gerbil.pkg))
+        rebind: #t)
+  
+     (def (settings-gerbil.pkg-pgetq s k (nope #f))
+       (<span style="color: #51afef;">let</span> (plist (settings-gerbil.pkg s))
+         (<span style="color: #51afef;">if</span> (not plist) nope (pgetq plist k nope))))
+  
+     (def settings-package (cut settings-gerbil.pkg-pgetq &lt;&gt; package:))
+     (def settings-namespace (cut settings-gerbil.pkg-pgetq &lt;&gt; namespace:))
+     (def settings-prelude (cut settings-gerbil.pkg-pgetq &lt;&gt; prelude:))
+
+          <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">-*- Gerbil -*-</span>
+          <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">(C) vyzo at hackzen.org, me at drewc.ca</span>
+          (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/expander/module</span> <span style="color: #c678dd;">:std/lazy</span>)
+          (def (prep-import-module
+                rpath
+                srcdir: (srcdir <span style="color: #98be65;">"/"</span>)
+                package: (_package #f)
+                id: (_id #f)
+                namespace: (_ns #f)
+                pre: (_pre #f)
+                (reload? #f))
+  
+            (def (import-source path)
+              (def mod-path (path-normalize path (<span style="color: #51afef;">or</span> srcdir #f) (<span style="color: #51afef;">or</span> srcdir <span style="color: #98be65;">""</span>)))
+  
+              (<span style="color: #51afef;">when</span> (member path (gx#current-expander-path))
+                (error <span style="color: #98be65;">"Cyclic expansion"</span> path))
+              (<span style="color: #51afef;">parameterize</span> ((gx#current-expander-context (gx#core-context-root))
+                             (gx#current-expander-marks [])
+                             (gx#current-expander-phi <span style="color: #da8548; font-weight: bold;">0</span>)
+                             (gx#current-expander-path
+                              (cons path (gx#current-expander-path)))
+                             (gx#current-import-expander-phi #f)
+                             (gx#current-export-expander-phi #f))
+                (<span style="color: #51afef;">let-values</span> (((pre id ns body)
+                              (gx#core-read-module mod-path)))
+                     (def module-name (path-strip-directory (path-strip-extension path)))
+                     (def module-id
+                       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we provide _id, use it(d)!</span>
+                       (<span style="color: #51afef;">or</span> _id
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+                         (<span style="color: #51afef;">if</span> (not (equal? module-name (symbol-&gt;string id))) id
+                           <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the id.</span>
+                           (<span style="color: #51afef;">if</span> (not _package) id
+                               <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as the package as a supercontainer and return</span>
+                               (string-&gt;symbol (path-expand module-name (symbol-&gt;string _package)))))))
+                   (def module-ns (<span style="color: #51afef;">or</span> _ns (<span style="color: #51afef;">if</span> (equal? module-name ns) (symbol-&gt;string module-id) ns)))
+                  (<span style="color: #51afef;">let*</span> ((prelude
+                          (<span style="color: #51afef;">cond</span>
+                           ((gx#prelude-context? pre) pre)
+                           ((gx#module-context? pre)
+                            (gx#core-module-&gt;prelude-context pre))
+                           ((string? pre)
+                            (gx#core-module-&gt;prelude-context
+                             (core-import-module pre)))
+                           ((not pre)
+                            (<span style="color: #51afef;">or</span> (gx#current-expander-module-prelude)
+                                (gx#make-prelude-context #f)))
+                           (<span style="color: #51afef;">else</span>
+                            (error <span style="color: #98be65;">"Cannot import module; unknown prelude"</span> rpath pre))))
+                         (ctx
+                          (gx#make-module-context module-id prelude module-ns path))
+                         (body
+                         (gx#core-expand-module-begin body ctx))
+                         (body
+                          (gx#core-quote-syntax
+                           (gx#core-cons '%#begin body)
+                           path ctx [])))
+                     (set! (gx#&amp;module-context-e ctx)
+                       (<span style="color: #51afef;">delay</span> (gx#eval-syntax* body)))
+                    (set! (gx#&amp;module-context-code ctx)
+                      body)
+                    (hash-put! (gx#current-expander-module-registry) path ctx)
+                    (hash-put! (gx#current-expander-module-registry) id ctx)
+                    ctx))))
+  
+            (<span style="color: #51afef;">let</span> (npath (path-normalize rpath #f))
+              (<span style="color: #51afef;">cond</span>
+               ((<span style="color: #51afef;">and</span> (not reload?)
+                     (hash-get (gx#current-expander-module-registry) npath))
+                =&gt; values)
+               (<span style="color: #51afef;">else</span> (<span style="color: #51afef;">parameterize</span> ((current-directory (<span style="color: #51afef;">or</span> srcdir (current-directory))))
+                       (import-source (path-normalize rpath #f)))))))
+  
+
+     (def (source-path mod ext settings)
+       (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
+
+    (def (force-outputs) (force-output (current-error-port)) (force-output)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+    (def (message . lst) (apply displayln lst) (force-outputs)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+
+  (def (gsc-compile-opts opts)
+    (match opts
+      ([[plist ...] . rest] (listify rest))
+      (_ (listify opts))))
+
+    (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+      (message <span style="color: #98be65;">"... compile-file "</span> mod)
+      (def gsc-opts (gsc-compile-opts opts))
+      (def srcpath (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+      (<span style="color: #51afef;">let</span> ((gxc-opts
+             [invoke-gsc: invoke-gsc?
+                          keep-scm: (not invoke-gsc?)
+                          output-dir: (settings-libdir settings)
+                          optimize: (settings-optimize settings)
+                          debug: (settings-debug settings)
+                          generate-ssxi: #t
+                          static: (settings-static settings)
+                          verbose: (settings-verbose&gt;=? settings <span style="color: #da8548; font-weight: bold;">9</span>)
+                          (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+        (compile-file srcpath gxc-opts)))
+
+  (def (set-loadpath settings)
+    (<span style="color: #51afef;">let*</span> ((loadpath (getenv <span style="color: #98be65;">"GERBIL_LOAD_PATH"</span> #f))
+           (loapath (<span style="color: #51afef;">if</span> loadpath (string-append loadpath <span style="color: #98be65;">":"</span>) <span style="color: #98be65;">""</span>))
+           (loadpath (string-append (<span style="color: #51afef;">or</span> loadpath <span style="color: #98be65;">""</span>) (settings-srcdir settings))))
+      (setenv <span style="color: #98be65;">"GERBIL_LOAD_PATH"</span> loadpath)))
+
+  (def (prep-mod mod settings (reload? #f))
+    (prep-import-module                   <span style="color: #5B6268;">;</span>
+     (source-path mod <span style="color: #98be65;">".ss"</span> settings)
+     srcdir: (settings-srcdir settings)
+     package: (settings-package settings)
+     namespace: (settings-namespace settings)
+     reload?))
+
+  (def (build-mods mods (srcdir (path-normalize (path-directory (this-source-file)))))
+    (def settings (make-settings srcdir: srcdir verbose: #t))
+    (set-loadpath settings)
+
+    (def (build-mod mod) (message <span style="color: #98be65;">"building "</span> mod)
+      (prep-mod mod settings)
+      (gxc-compile-file mod [] settings))
+
+
+    (message <span style="color: #98be65;">"Builings Mods "</span> mods)
+
+    (<span style="color: #51afef;">let</span> <span style="color: #c678dd;">build</span> ((ms mods))
+      (<span style="color: #51afef;">unless</span> (null? ms)
+        (build-mod (car ms)) (build (cdr ms)))))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">
+  (def +this-file+ (this-source-file))
+  (def +this-srcdir+ (path-normalize (path-directory +this-file+)))
+
+  (current-directory +this-srcdir+)
+  (load <span style="color: #98be65;">"test-bootstrap1.ss"</span>)
+
+  (def mods
+    '(<span style="color: #98be65;">"make/base"</span> <span style="color: #98be65;">"make/settings"</span> <span style="color: #98be65;">"make/expander-module"</span> <span style="color: #98be65;">"make/mod"</span>))
+
+  (def +mod-src-dir+ (path-expand <span style="color: #98be65;">".."</span> +this-srcdir+ ))
+
+  (current-directory +mod-src-dir+)
+
+  (message <span style="color: #98be65;">"srcdir "</span> +mod-src-dir+)
+
+  (build-mods mods +mod-src-dir+)
+
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-shell">   <span style="color: #ECBE7B;">rm</span> -rf ~/.gerbil/lib/std/make/*
+   ~/src/gerbil-build/test/build1.ss
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-shell"> srcdir /home/user/src/gerbil-build/test/..
+ Builings Mods <span style="color: #51afef;">(</span>make/base make/settings make/expander-module make/mod<span style="color: #51afef;">)</span>
+ building make/base
+ ... compile-file make/base
+ building make/settings
+ ... compile-file make/settings
+ building make/expander-module
+ ... compile-file make/expander-module
+ building make/mod
+ ... compile-file make/mod
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orga10d025" class="outline-3">
+<h3 id="orga10d025">Step 3: Release pre-0.1 build</h3>
+<div class="outline-text-3" id="text-orga10d025">
+<p>
+Now that I have it working to build itself it&rsquo;s time to release it. First
+compile all the files using ourself. 
+</p>
+
+<p>
+The <code>make/boostrap</code> module has the bare minimum needed to make something.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  package: std/make
+  namespace: std/make/bootstrap
+  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/misc/path</span> <span style="color: #c678dd;">:std/misc/list</span> <span style="color: #c678dd;">:gerbil/compiler</span> <span style="color: #c678dd;">:gerbil/gambit/ports</span>)
+  (<span style="color: #51afef;">export</span> #t)
+
+     <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Settings: see details in doc/reference/make.md</span>
+     (defstruct settings
+       (srcdir libdir bindir force optimize debug static
+               static-debug verbose build-deps parallelize gerbil.pkg)
+       transparent: #t constructor: <span style="color: #c678dd;">:init!</span>)
+  
+     (def current-make-settings (make-parameter #f))
+
+  (def (settings-verbose&gt;=? settings level)
+    (def verbose (settings-verbose settings))
+    (<span style="color: #51afef;">and</span> (real? level) (real? verbose) (&gt;= verbose level)))
+
+     (def (gerbil-build-cores)
+       (with-catch (<span style="color: #51afef;">lambda</span> (_) (##cpu-count)) (<span style="color: #51afef;">lambda</span> () (string-&gt;number (getenv <span style="color: #98be65;">"GERBIL_BUILD_CORES"</span>)))))
+
+     (def (read-gerbil.pkg-plist srcdir)
+       (with-catch
+        false (<span style="color: #51afef;">lambda</span> () (<span style="color: #51afef;">call-with-input-file</span> (path-expand <span style="color: #98be65;">"gerbil.pkg"</span> srcdir) read))))
+  
+     (defmethod {<span style="color: #c678dd;">:init!</span> settings}
+      (<span style="color: #51afef;">lambda</span> (self
+          srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+          gerbil.pkg: (gxpkg_ #f) force: (force? #f)
+          optimize: (optimize #t) debug: (debug 'env)
+          static: (static #t) static-debug: (static-debug #f)
+          verbose: (verbose #f) build-deps: (build-deps_ #f)
+          parallelize: (parallelize_ #t))
+        (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+        (def srcdir (<span style="color: #51afef;">or</span> srcdir_ (error <span style="color: #98be65;">"srcdir must be specified"</span>)))
+        (def gerbil.pkg (<span style="color: #51afef;">or</span> gxpkg_ (read-gerbil.pkg-plist srcdir_ )))
+        (def libdir (<span style="color: #51afef;">or</span> libdir_ (path-expand <span style="color: #98be65;">"lib"</span> gerbil-path)))
+        (def bindir (<span style="color: #51afef;">or</span> bindir_ (path-expand <span style="color: #98be65;">"bin"</span> gerbil-path)))
+        (def build-deps (path-expand (<span style="color: #51afef;">or</span> build-deps_ <span style="color: #98be65;">"build-deps"</span>) srcdir))
+        (def parallelize (<span style="color: #51afef;">if</span> (eq? parallelize_ #t) (gerbil-build-cores) (<span style="color: #51afef;">or</span> parallelize_ <span style="color: #da8548; font-weight: bold;">0</span>)))
+        (struct-instance-init!
+          self
+          srcdir libdir bindir force? optimize debug static static-debug verbose build-deps
+          parallelize gerbil.pkg))
+        rebind: #t)
+  
+     (def (settings-gerbil.pkg-pgetq s k (nope #f))
+       (<span style="color: #51afef;">let</span> (plist (settings-gerbil.pkg s))
+         (<span style="color: #51afef;">if</span> (not plist) nope (pgetq plist k nope))))
+  
+     (def settings-package (cut settings-gerbil.pkg-pgetq &lt;&gt; package:))
+     (def settings-namespace (cut settings-gerbil.pkg-pgetq &lt;&gt; namespace:))
+     (def settings-prelude (cut settings-gerbil.pkg-pgetq &lt;&gt; prelude:))
+
+          <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">-*- Gerbil -*-</span>
+          <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">(C) vyzo at hackzen.org, me at drewc.ca</span>
+          (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/expander/module</span> <span style="color: #c678dd;">:std/lazy</span>)
+          (def (prep-import-module
+                rpath
+                srcdir: (srcdir <span style="color: #98be65;">"/"</span>)
+                package: (_package #f)
+                id: (_id #f)
+                namespace: (_ns #f)
+                pre: (_pre #f)
+                (reload? #f))
+  
+            (def (import-source path)
+              (def mod-path (path-normalize path (<span style="color: #51afef;">or</span> srcdir #f) (<span style="color: #51afef;">or</span> srcdir <span style="color: #98be65;">""</span>)))
+  
+              (<span style="color: #51afef;">when</span> (member path (gx#current-expander-path))
+                (error <span style="color: #98be65;">"Cyclic expansion"</span> path))
+              (<span style="color: #51afef;">parameterize</span> ((gx#current-expander-context (gx#core-context-root))
+                             (gx#current-expander-marks [])
+                             (gx#current-expander-phi <span style="color: #da8548; font-weight: bold;">0</span>)
+                             (gx#current-expander-path
+                              (cons path (gx#current-expander-path)))
+                             (gx#current-import-expander-phi #f)
+                             (gx#current-export-expander-phi #f))
+                (<span style="color: #51afef;">let-values</span> (((pre id ns body)
+                              (gx#core-read-module mod-path)))
+                     (def module-name (path-strip-directory (path-strip-extension path)))
+                     (def module-id
+                       <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we provide _id, use it(d)!</span>
+                       (<span style="color: #51afef;">or</span> _id
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+                         <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+                         (<span style="color: #51afef;">if</span> (not (equal? module-name (symbol-&gt;string id))) id
+                           <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the id.</span>
+                           (<span style="color: #51afef;">if</span> (not _package) id
+                               <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as the package as a supercontainer and return</span>
+                               (string-&gt;symbol (path-expand module-name (symbol-&gt;string _package)))))))
+                   (def module-ns (<span style="color: #51afef;">or</span> _ns (<span style="color: #51afef;">if</span> (equal? module-name ns) (symbol-&gt;string module-id) ns)))
+                  (<span style="color: #51afef;">let*</span> ((prelude
+                          (<span style="color: #51afef;">cond</span>
+                           ((gx#prelude-context? pre) pre)
+                           ((gx#module-context? pre)
+                            (gx#core-module-&gt;prelude-context pre))
+                           ((string? pre)
+                            (gx#core-module-&gt;prelude-context
+                             (core-import-module pre)))
+                           ((not pre)
+                            (<span style="color: #51afef;">or</span> (gx#current-expander-module-prelude)
+                                (gx#make-prelude-context #f)))
+                           (<span style="color: #51afef;">else</span>
+                            (error <span style="color: #98be65;">"Cannot import module; unknown prelude"</span> rpath pre))))
+                         (ctx
+                          (gx#make-module-context module-id prelude module-ns path))
+                         (body
+                         (gx#core-expand-module-begin body ctx))
+                         (body
+                          (gx#core-quote-syntax
+                           (gx#core-cons '%#begin body)
+                           path ctx [])))
+                     (set! (gx#&amp;module-context-e ctx)
+                       (<span style="color: #51afef;">delay</span> (gx#eval-syntax* body)))
+                    (set! (gx#&amp;module-context-code ctx)
+                      body)
+                    (hash-put! (gx#current-expander-module-registry) path ctx)
+                    (hash-put! (gx#current-expander-module-registry) id ctx)
+                    ctx))))
+  
+            (<span style="color: #51afef;">let</span> (npath (path-normalize rpath #f))
+              (<span style="color: #51afef;">cond</span>
+               ((<span style="color: #51afef;">and</span> (not reload?)
+                     (hash-get (gx#current-expander-module-registry) npath))
+                =&gt; values)
+               (<span style="color: #51afef;">else</span> (<span style="color: #51afef;">parameterize</span> ((current-directory (<span style="color: #51afef;">or</span> srcdir (current-directory))))
+                       (import-source (path-normalize rpath #f)))))))
+  
+
+     (def (source-path mod ext settings)
+       (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
+
+    (def (force-outputs) (force-output (current-error-port)) (force-output)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+    (def (message . lst) (apply displayln lst) (force-outputs)) <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">move to std/misc/ports ?</span>
+
+  (def (gsc-compile-opts opts)
+    (match opts
+      ([[plist ...] . rest] (listify rest))
+      (_ (listify opts))))
+
+    (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+      (message <span style="color: #98be65;">"... compile-file "</span> mod)
+      (def gsc-opts (gsc-compile-opts opts))
+      (def srcpath (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+      (<span style="color: #51afef;">let</span> ((gxc-opts
+             [invoke-gsc: invoke-gsc?
+                          keep-scm: (not invoke-gsc?)
+                          output-dir: (settings-libdir settings)
+                          optimize: (settings-optimize settings)
+                          debug: (settings-debug settings)
+                          generate-ssxi: #t
+                          static: (settings-static settings)
+                          verbose: (settings-verbose&gt;=? settings <span style="color: #da8548; font-weight: bold;">9</span>)
+                          (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+        (compile-file srcpath gxc-opts)))
+
+  (def (set-loadpath settings)
+    (<span style="color: #51afef;">let*</span> ((loadpath (getenv <span style="color: #98be65;">"GERBIL_LOAD_PATH"</span> #f))
+           (loapath (<span style="color: #51afef;">if</span> loadpath (string-append loadpath <span style="color: #98be65;">":"</span>) <span style="color: #98be65;">""</span>))
+           (loadpath (string-append (<span style="color: #51afef;">or</span> loadpath <span style="color: #98be65;">""</span>) (settings-srcdir settings))))
+      (setenv <span style="color: #98be65;">"GERBIL_LOAD_PATH"</span> loadpath)))
+
+  (def (prep-mod mod settings (reload? #f))
+    (prep-import-module                   <span style="color: #5B6268;">;</span>
+     (source-path mod <span style="color: #98be65;">".ss"</span> settings)
+     srcdir: (settings-srcdir settings)
+     package: (settings-package settings)
+     namespace: (settings-namespace settings)
+     reload?))
+
+  (def (bootstrap-make mods srcdir)
+    (def settings (make-settings srcdir: srcdir verbose: <span style="color: #da8548; font-weight: bold;">10</span>))
+    (set-loadpath settings)
+
+    (def (build-mod mod) (message <span style="color: #98be65;">"Bootstrap building "</span> mod)
+      (prep-mod mod settings)
+      (gxc-compile-file mod [] settings))
+
+
+    (<span style="color: #51afef;">let</span> <span style="color: #c678dd;">build</span> ((ms mods))
+      (<span style="color: #51afef;">unless</span> (null? ms)
+        (build-mod (car ms)) (build (cdr ms)))))
+</pre>
+</div>
+</div>
+
+<ul class="org-ul">
+<li><a id="org2952bb4"></a><code>make/gsc</code>: The Gambit compiler<br />
+<div class="outline-text-5" id="text-org2952bb4">
+<p>
+There&rsquo;s one function that belongs here.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">package: std/make
+(<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/misc/list</span>)
+(<span style="color: #51afef;">export</span> gsc-compile-opts)
+(def (gsc-compile-opts opts)
+  (match opts
+    ([[plist ...] . rest] (listify rest))
+    (_ (listify opts))))
+</pre>
+</div>
+</div>
+</li>
+
+
+<li><a id="orgde78104"></a><code>make/gxc</code>: The gerbil compiler<br />
+<div class="outline-text-5" id="text-orgde78104">
+<p>
+<a href="#gxc_outputs_begin">Now,</a> it seems that the entire reason I started this was an error that may get
+taken care of by redefining <code>gxc-outputs</code>. Still not quite done as I have no
+idea where <code>static-path</code> is actually built or used, but that matters not for
+this release.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">(def (gxc-outputs mod opts settings)
+  [(library-path mod <span style="color: #98be65;">".ssi"</span> settings)
+  <span style="color: #5B6268;">; </span><span style="color: #5B6268;">(when/list (settings-static settings) [(static-path mod settings)]) ...</span>
+  ])
+</pre>
+</div>
+
+
+<div class="org-src-container">
+<pre class="src src-scheme"> package: std/make
+ (<span style="color: #51afef;">import</span> ./base ./settings ./mod ./gsc <span style="color: #c678dd;">:std/misc/list</span> <span style="color: #c678dd;">:gerbil/compiler</span>)
+ (<span style="color: #51afef;">export</span> gxc-compile gxc-outputs)
+
+ (def (gxc-outputs mod opts settings)
+   [(library-path mod <span style="color: #98be65;">".ssi"</span> settings)
+   <span style="color: #5B6268;">; </span><span style="color: #5B6268;">(when/list (settings-static settings) [(static-path mod settings)]) ...</span>
+   ])
+
+   (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+     (message <span style="color: #98be65;">"... compile-file "</span> mod)
+     (def gsc-opts (gsc-compile-opts opts))
+     (def srcpath (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+     (<span style="color: #51afef;">let</span> ((gxc-opts
+            [invoke-gsc: invoke-gsc?
+                         keep-scm: (not invoke-gsc?)
+                         output-dir: (settings-libdir settings)
+                         optimize: (settings-optimize settings)
+                         debug: (settings-debug settings)
+                         generate-ssxi: #t
+                         static: (settings-static settings)
+                         verbose: (settings-verbose&gt;=? settings <span style="color: #da8548; font-weight: bold;">9</span>)
+                         (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+       (compile-file srcpath gxc-opts)))
+
+ (def gxc-compile gxc-compile-file)
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="orgf0a1747"></a><code>make/spec</code>: Specifications<br />
+<div class="outline-text-5" id="text-orgf0a1747">
+<p>
+Essentially we want a short form syntax for making <b>make/makefiles</b>, aka
+<code>build.ss</code>.
+</p>
+
+<p>
+Specs are built.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (def (spec-build spec settings)
+    (match spec
+      ((? string? modf)
+       (gxc-compile modf #f settings #t))
+      ([gxc: modf . opts]
+       (gxc-compile modf opts settings #t))
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([gsc: modf . opts]</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(gsc-compile modf opts settings))</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([ssi: modf . submodules]</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(for-each (cut build &lt;&gt; settings) submodules)</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(compile-ssi modf '() settings))</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([exe: modf . opts]</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(compile-exe modf opts settings))</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([static-exe: modf . opts]</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(compile-static-exe modf opts settings))</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([static-include: file]</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(copy-static file settings))</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([copy: file]</span>
+      <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(copy-compiled file settings))</span>
+      (<span style="color: #51afef;">else</span>
+       (error <span style="color: #98be65;">"Bad buildspec"</span> spec))))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  package: std/make
+  (<span style="color: #51afef;">import</span> ./mod ./gxc <span style="color: #c678dd;">:std/srfi/1</span>)
+  (<span style="color: #51afef;">export</span> #t)
+  <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Build item spec</span>
+  (def (spec-type spec)
+    (match spec
+      ((? string? _) gxc:)
+      ([(? keyword? type) . _] type)
+      (<span style="color: #51afef;">else</span> (error <span style="color: #98be65;">"Bad buildspec"</span> spec))))
+
+  (def (spec-file spec settings)
+    (match spec
+      ((? string? modf) (source-path modf <span style="color: #98be65;">".ss"</span> settings))
+      ([gxc: modf . opts] (source-path modf <span style="color: #98be65;">".ss"</span> settings))
+      ([gsc: modf . opts] (source-path modf <span style="color: #98be65;">".scm"</span> settings))
+      ([ssi: modf . deps] (source-path modf <span style="color: #98be65;">".ssi"</span> settings))
+      ([exe: modf . opts] (source-path modf <span style="color: #98be65;">".ss"</span> settings))
+      ([static-exe: modf . opts] (source-path modf <span style="color: #98be65;">".ss"</span> settings))
+      ([static-include: file] (static-file-path file settings))
+      ([copy: file] file)
+      (<span style="color: #51afef;">else</span>
+       (error <span style="color: #98be65;">"Bad buildspec"</span> spec))))
+
+  (def (spec-inputs spec settings)
+    [(spec-file spec settings) (spec-extra-inputs spec settings) ...])
+
+  (def (spec-extra-inputs spec settings)
+    (match spec
+      ([gxc: . _] (pgetq extra-inputs: (spec-plist spec) []))
+      ([gsc: . _] (pgetq extra-inputs: (spec-plist spec) []))
+      ([ssi: _ . submodules] (append-map (cut spec-inputs &lt;&gt; settings) submodules))
+      (_ [])))
+
+  (def (spec-plist spec)
+    (match spec
+      ([(? (cut member &lt;&gt; '(gxc: gsc:))) _ [plist ...] . _] plist)
+      (_ [])))
+
+  (def (spec-outputs spec settings)
+    (match spec
+      ((? string? modf) (gxc-outputs modf #f settings))
+      ([gxc: modf . opts] (gxc-outputs modf opts settings))
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([gsc: modf . opts] [(gsc-c-path modf settings)])</span>
+      ([ssi: modf . submodules] [(library-path modf <span style="color: #98be65;">".ssi"</span> settings)
+                                 (append-map (cut spec-outputs &lt;&gt; settings) submodules) ...])
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([exe: modf . opts] [(library-path modf ".ssi" settings)</span>
+      <span style="color: #5B6268;">;;                      </span><span style="color: #5B6268;">(binary-path modf opts settings)])</span>
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([static-exe: modf . opts] [(binary-path modf opts settings)</span>
+      <span style="color: #5B6268;">;;                            </span><span style="color: #5B6268;">(static-path modf settings)])</span>
+      ([static-include: file] [(static-file-path file settings)])
+      ([copy: file] [(library-path file #f settings)])
+      (<span style="color: #51afef;">else</span> (error <span style="color: #98be65;">"Bad buildspec"</span> spec))))
+
+  (def (spec-backgroundable? spec)
+    (<span style="color: #51afef;">case</span> (spec-type spec)
+      ((gxc:) (not (pgetq foreground: (spec-plist spec))))
+      ((gsc:) #t)
+      (<span style="color: #51afef;">else</span> #f)))
+
+    (def (spec-build spec settings)
+      (match spec
+        ((? string? modf)
+         (gxc-compile modf #f settings #t))
+        ([gxc: modf . opts]
+         (gxc-compile modf opts settings #t))
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([gsc: modf . opts]</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(gsc-compile modf opts settings))</span>
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([ssi: modf . submodules]</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(for-each (cut build &lt;&gt; settings) submodules)</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(compile-ssi modf '() settings))</span>
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([exe: modf . opts]</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(compile-exe modf opts settings))</span>
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([static-exe: modf . opts]</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(compile-static-exe modf opts settings))</span>
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([static-include: file]</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(copy-static file settings))</span>
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">([copy: file]</span>
+        <span style="color: #5B6268;">;;  </span><span style="color: #5B6268;">(copy-compiled file settings))</span>
+        (<span style="color: #51afef;">else</span>
+         (error <span style="color: #98be65;">"Bad buildspec"</span> spec))))
+</pre>
+</div>
+</div>
+</li>
+
+
+<li><a id="org3c4faad"></a><code>make/make</code>: The maker of makes<br />
+<div class="outline-text-5" id="text-org3c4faad">
+<p>
+We very much want build.ss to be minimal. This is where the middle meddling all
+takes place.
+</p>
+
+<p>
+We&rsquo;ll just simply experiment. We error if there is no input, and warn if the
+output &ldquo;fails&rdquo;.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  package: std/make
+  (<span style="color: #51afef;">import</span> ./spec ./base ./settings)
+  (<span style="color: #51afef;">export</span> make)
+
+  (def (make-spec spec settings)
+    (def inputs (spec-inputs spec settings))
+    (def outputs (spec-outputs spec settings))
+
+    (<span style="color: #51afef;">let</span> <span style="color: #c678dd;">exists?</span> ((is inputs))
+      (<span style="color: #51afef;">unless</span> (null? is)
+        (<span style="color: #51afef;">unless</span> (file-exists? (car is))
+          (error <span style="color: #98be65;">"Build Input file does not exist: "</span> (car is)))
+        (exists? (cdr is))))
+
+    (<span style="color: #51afef;">let</span> (res (spec-build spec settings))
+      (begin0 res
+        (message <span style="color: #98be65;">"build result "</span> res <span style="color: #98be65;">" for "</span> spec)
+        (<span style="color: #51afef;">let</span> <span style="color: #c678dd;">exists?</span> ((os outputs))
+          (<span style="color: #51afef;">unless</span> (null? os) (<span style="color: #51afef;">unless</span> (file-exists? (car os))
+                               (displayln <span style="color: #98be65;">"\nBuild Output file does not exist: "</span> (car os)))
+                  (exists? (cdr os)))))))
+
+  (def (make build-spec . args)
+    (def settings (apply make-settings args))
+    (<span style="color: #51afef;">let</span> <span style="color: #c678dd;">%make</span> ((s build-spec))
+      (def spec (car s)) (def rest (cdr s))
+      (make-spec spec settings) (<span style="color: #51afef;">unless</span> (null? rest) (%make rest))))
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="orga571c4c"></a><code>/make/script</code>: A clone of up above.<br />
+<div class="outline-text-5" id="text-orga571c4c">
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">-*- Gerbil -*-</span>
+<span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">(C) vyzo at hackzen.org, me at drewc.ca</span>
+<span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">package build script template</span>
+package: std/make
+(<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/make/make</span>
+        <span style="color: #c678dd;">:gerbil/gambit/misc</span>)
+
+(<span style="color: #51afef;">export</span> defmake-script build-main)
+
+(def (build-main args build-spec keys that-file)
+  (def srcdir (path-normalize (path-directory that-file)))
+  (def (build) (apply make build-spec srcdir: srcdir keys))
+  (match args
+    ([<span style="color: #98be65;">"meta"</span>] (write '(<span style="color: #98be65;">"spec"</span> <span style="color: #98be65;">"compile"</span>)) (newline))
+    ([<span style="color: #98be65;">"spec"</span>] (pretty-print build-spec))
+    ([<span style="color: #98be65;">"compile"</span>] (build))
+    ([] (build))))
+
+(defsyntax (defmake-script stx)
+  (syntax-case stx ()
+    ((macro build-spec keys ...)
+     (with-syntax* ((@this-script (stx-identifier #'macro 'this-source-file))
+                    (+this-source-file+ (syntax/loc stx (@this-script)))
+                    (@main        (stx-identifier #'macro 'main)))
+       #'(def (@main . args)
+           (build-main args build-spec [keys ...] +this-source-file+))))))
+</pre>
+</div>
+</div>
+</li>
+<li><a id="org8945184"></a><code>build.ss</code>: The makefile for making makefiles.<br />
+<div class="outline-text-5" id="text-org8945184">
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/expander</span> <span style="color: #c678dd;">:std/misc/path</span> )
+
+  (def this-file (this-source-file))
+
+  (def srcdir (path-directory this-file))
+
+  (def build-specs
+    '(<span style="color: #98be65;">"make/base"</span> <span style="color: #98be65;">"make/settings"</span> <span style="color: #98be65;">"make/expander-module"</span> <span style="color: #98be65;">"make/mod"</span>
+      <span style="color: #98be65;">"make/gsc"</span> <span style="color: #98be65;">"make/gxc"</span> <span style="color: #98be65;">"make/spec"</span> <span style="color: #98be65;">"make/make"</span> <span style="color: #98be65;">"make/script"</span>))
+
+  (gx#import-module (path-expand <span style="color: #98be65;">"make/bootstrap.ss"</span> srcdir) #t #t)
+
+  ((eval 'std/make/bootstrap#bootstrap-make) build-specs srcdir)
+</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+
+
+<div id="outline-container-org57dc24c" class="outline-3">
+<h3 id="org57dc24c">Step 4: Test the new <code>make/script</code></h3>
+<div class="outline-text-3" id="text-org57dc24c">
+<p>
+This is just simple. There&rsquo;s a lot more to come but prerelease means only this.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:std/make/script</span>)
+  (defmake-script [<span style="color: #98be65;">"hello"</span>] verbose: <span style="color: #da8548; font-weight: bold;">10</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell"><span style="color: #ECBE7B;">rm</span> ~/.gerbil/lib/drewc/hello*
+~/src/gerbil-build/test/build.ss
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">... compile-file hello
+compile /home/user/src/gerbil-build/test/hello.ss
+compile drewc/hello 
+<span style="color: #5B6268;"># </span><span style="color: #5B6268;">[...] </span>
+compile ~/.gerbil/lib/drewc/hello__0.scm
+invoke gsc <span style="color: #51afef;">(</span>gsc -:i8,f8,-8,t8 -debug-environments ~/.gerbil/lib/drewc/hello__0.scm<span style="color: #51afef;">)</span>
+copy static module ~/.gerbil/lib/drewc/hello__0.scm =&gt; ~/.gerbil/lib/static/drewc__hello.scm
+compile ~/.gerbil/lib/drewc/hello__rt.scm
+invoke gsc <span style="color: #51afef;">(</span>gsc -:i8,f8,-8,t8 -debug-environments ~/.gerbil/lib/drewc/hello__rt.scm<span style="color: #51afef;">)</span>
+compile ~/.gerbil/lib/drewc/hello.ssi
+generate typedecl drewc/hello#hello
+compile ~/.gerbil/lib/drewc/hello.ssxi.ss
+build result <span style="color: #5B6268;">#</span><span style="color: #5B6268;">!void for hello</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-scheme">  (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:drewc/hello</span> <span style="color: #c678dd;">:std/test</span>)
+
+  (check (drewc/hello#hello) =&gt; <span style="color: #98be65;">"Hello World"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-shell">gxi -e <span style="color: #98be65;">'(load "~/src/gerbil-build/test/make-script.ss")'</span>
+</pre>
+</div>
+<p>
+1
+</p>
+<pre class="example">
+Hello World
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgc01fd2a" class="outline-3">
+<h3 id="orgc01fd2a">Step 5: Publish Documentation (literately)</h3>
+<div class="outline-text-3" id="text-orgc01fd2a">
+<p>
+Literate programming involves <b>weaving</b> out documentation as well and <b>tangling</b>
+source code.
+</p>
+
+<p>
+As of &ldquo;right now&rdquo; (git commit: <code>d0ac46b370dbfa915b65a3c024eb63ac27d1024e</code>),
+everything is contained in a <code>README.org</code> which, to be quite honest, is not
+necessarily the correct place to design, implement and document an entire
+project.
+</p>
+</div>
+
+<div id="outline-container-org6bb2c6b" class="outline-4">
+<h4 id="org6bb2c6b">Org Mode and HTML</h4>
+<div class="outline-text-4" id="text-org6bb2c6b">
+<p>
+<a href="https://orgmode.org/worg/org-tutorials/org-publish-html-tutorial.html">https://orgmode.org/worg/org-tutorials/org-publish-html-tutorial.html</a>
+</p>
+
+<p>
+&ldquo;The export options template The first choice is the export options template on
+top of the file. When in an Org-mode file, you may insert basic information
+using C-c C-e # (org-export-dispatch)&rdquo;
+</p>
+
+<div class="org-src-container">
+<pre class="src src-emacs-lisp"><span style="color: #51afef;">(</span><span style="color: #51afef;">setq</span> <span style="color: #dcaeea;">org-publish-project-alist</span>
+      <span style="color: #51afef;">`</span><span style="color: #c678dd;">(</span><span style="color: #98be65;">(</span><span style="color: #98be65;">"gerbil-build-docs-static"</span>
+         <span style="color: #c678dd;">:base-directory</span> <span style="color: #98be65;">"~/src/gerbil-build/"</span>
+         <span style="color: #c678dd;">:publishing-directory</span> <span style="color: #98be65;">"~/src/gerbil-build/doc/html/"</span>
+         <span style="color: #c678dd;">:publishing-function</span> org-publish-attachment
+         <span style="color: #c678dd;">:recursive</span> t
+         <span style="color: #c678dd;">:exclude</span> <span style="color: #98be65;">"doc/html"</span>
+         <span style="color: #c678dd;">:base-extension</span> <span style="color: #98be65;">"css</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">js</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">png</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">jpg</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">gif</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">pdf</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">mp3</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">ogg</span><span style="color: #51afef; font-weight: bold;">\\</span><span style="color: #51afef; font-weight: bold;">|</span><span style="color: #98be65;">swf"</span>
+         <span style="color: #98be65;">)</span>
+
+        <span style="color: #98be65;">(</span><span style="color: #98be65;">"gerbil-build-site"</span>
+         <span style="color: #c678dd;">:base-directory</span> <span style="color: #98be65;">"~/src/gerbil-build/"</span>
+         <span style="color: #c678dd;">:exclude</span> <span style="color: #98be65;">"doc/html"</span>
+         <span style="color: #c678dd;">:publishing-directory</span> <span style="color: #98be65;">"~/src/gerbil-build/doc/html/"</span>
+         <span style="color: #c678dd;">:publishing-function</span> org-html-publish-to-html
+         <span style="color: #c678dd;">:section-numbers</span> nil
+         <span style="color: #c678dd;">:with-toc</span> nil
+         <span style="color: #c678dd;">:recursive</span> t<span style="color: #98be65;">)</span>
+        
+        
+        <span style="color: #c678dd;">)</span><span style="color: #51afef;">)</span>
+
+
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org75a982a" class="outline-4">
+<h4 id="org75a982a"><code>index.org</code></h4>
+<div class="outline-text-4" id="text-org75a982a">
+<p>
+I&rsquo;m going to make a simple file that really is the index of this project for everybody. For now it&rsquo;s very simple.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org46b2014" class="outline-4">
+<h4 id="org46b2014">GitHub Pages</h4>
+<div class="outline-text-4" id="text-org46b2014">
+<p>
+The entire point of documentation is to read it. Right now, github is the place.
+</p>
+</div>
+</div>
+</div>
+</div>
+
+
+
+<div id="outline-container-orgded5456" class="outline-2">
+<h2 id="orgded5456">Conclusion</h2>
+</div>
+
+<div id="outline-container-org3a5dfb6" class="outline-2">
+<h2 id="org3a5dfb6">Appendicitis</h2>
+<div class="outline-text-2" id="text-org3a5dfb6">
+<div class="org-src-container">
+<pre class="src src-scheme">    (<span style="color: #51afef;">import</span> <span style="color: #c678dd;">:gerbil/compiler</span> <span style="color: #c678dd;">:std/misc/path</span> <span style="color: #c678dd;">:std/misc/list</span>
+          <span style="color: #c678dd;">:std/misc/concurrent-plan</span>)
+
+      <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">Settings: see details in doc/reference/make.md</span>
+      (defstruct settings
+        (srcdir libdir bindir package force optimize debug static static-debug verbose build-deps
+         libdir-prefix parallelize)
+        transparent: #t constructor: <span style="color: #c678dd;">:init!</span>)
+  
+     (def current-make-settings (make-parameter #f))
+
+     (def (gerbil-build-cores)
+       (with-catch (<span style="color: #51afef;">lambda</span> (_) (##cpu-count)) (<span style="color: #51afef;">lambda</span> () (string-&gt;number (getenv <span style="color: #98be65;">"GERBIL_BUILD_CORES"</span>)))))
+
+     (defmethod {<span style="color: #c678dd;">:init!</span> settings}
+      (<span style="color: #51afef;">lambda</span> (self
+          srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+          package: (package_ #f) force: (force? #f)
+          optimize: (optimize #t) debug: (debug 'env)
+          static: (static #t) static-debug: (static-debug #f)
+          verbose: (verbose #f) build-deps: (build-deps_ #f)
+          parallelize: (parallelize_ #t))
+        (def gerbil-path (getenv <span style="color: #98be65;">"GERBIL_PATH"</span> <span style="color: #98be65;">"~/.gerbil"</span>))
+        (def srcdir (<span style="color: #51afef;">or</span> srcdir_ (error <span style="color: #98be65;">"srcdir must be specified"</span>)))
+        (def libdir (<span style="color: #51afef;">or</span> libdir_ (path-expand <span style="color: #98be65;">"lib"</span> gerbil-path)))
+        (def bindir (<span style="color: #51afef;">or</span> bindir_ (path-expand <span style="color: #98be65;">"bin"</span> gerbil-path)))
+        (def package (<span style="color: #51afef;">and</span> package_ (<span style="color: #51afef;">if</span> (symbol? package_) (symbol-&gt;string package_) package_)))
+        (def libdir-prefix (<span style="color: #51afef;">if</span> package (path-expand package libdir) libdir))
+        (def build-deps (path-expand (<span style="color: #51afef;">or</span> build-deps_ <span style="color: #98be65;">"build-deps"</span>) srcdir))
+        (def parallelize (<span style="color: #51afef;">if</span> (eq? parallelize_ #t) (gerbil-build-cores) (<span style="color: #51afef;">or</span> parallelize_ <span style="color: #da8548; font-weight: bold;">0</span>)))
+        (struct-instance-init!
+          self
+          srcdir libdir bindir package force? optimize debug static static-debug verbose build-deps
+          libdir-prefix parallelize))
+      rebind: #t)
+
+     (def (source-path mod ext settings)
+       (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
+
+    (def mod-modules (make-hash-table)) <span style="color: #5B6268;">;;; </span><span style="color: #5B6268;">cache</span>
+    (def (mod-module mod (settings (current-make-settings)) (reload? #f))
+      (<span style="color: #51afef;">let</span> (v (hash-ref mod-modules mod (void)))
+        (<span style="color: #51afef;">if</span> (<span style="color: #51afef;">and</span> (not (void? v)) (not reload?)) v
+            (<span style="color: #51afef;">let*</span> ((src (source-path mod <span style="color: #98be65;">".ss"</span> settings))
+                   (m (<span style="color: #51afef;">and</span> (file-exists? src) (gx#import-module src reload?))))
+              (begin0 m (hash-put! mod-modules mod m))))))
+  
+    (def module-id gx#expander-context-id)
+    (def module-id-set! gx#expander-context-id-set!)
+
+    (def mod-core-modules (make-hash-table))
+    (def (mod-core-module mod (settings (current-make-settings)) (reload? #f))
+      <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">=&gt; (values prelude module-id module-ns body)</span>
+      (def (mrm)
+        (<span style="color: #51afef;">let</span> (v (<span style="color: #51afef;">if</span> reload? (void) (hash-ref mod-core-modules mod (void))))
+          (<span style="color: #51afef;">if</span> (not (void? v)) v
+              (<span style="color: #51afef;">let*</span> ((src (path-force-extension mod <span style="color: #98be65;">".ss"</span>))
+                     (rm (<span style="color: #51afef;">and</span> (file-exists? src) (gx#core-read-module src))))
+                (begin0 rm (hash-put! mod-core-modules mod rm))))))
+      (<span style="color: #51afef;">let</span> ((srcdir (path-normalize (settings-srcdir settings)))
+            (cd (path-normalize (current-directory))))
+        (<span style="color: #51afef;">if</span> (equal? srcdir cd) (mrm)
+            (<span style="color: #51afef;">parameterize</span> ((current-directory srcdir))
+              (mrm)))))
+  
+    (def core-module-prelude (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">0</span>))
+    (def core-module-id (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">1</span>))
+    (def core-module-ns (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">2</span>))
+    (def core-module-code (cut values-ref &lt;&gt; <span style="color: #da8548; font-weight: bold;">3</span>))
+
+    (def (mod-module-id mod (settings (current-make-settings)))
+      (<span style="color: #51afef;">let</span> ((mcm (mod-core-module mod settings))
+            (sp (settings-package settings)))
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If the core module package is the same as the mod that means we could not</span>
+        <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">find a package.</span>
+        (<span style="color: #51afef;">if</span> (equal? mod (symbol-&gt;string (core-module-id mcm)))
+          <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">If we do not have a toplevel package we are the package.</span>
+          (<span style="color: #51afef;">if</span> (not sp) (string-&gt;symbol mod)
+              <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">otherwise add it as a super and return</span>
+              (string-&gt;symbol (path-expand mod sp)))
+          <span style="color: #5B6268;">;; </span><span style="color: #5B6268;">Otherwise the mrm has the right id</span>
+          (core-module-id mcm))))
+
+     (def module-ns gx#module-context-ns)
+     (def module-ns-set! gx#module-context-ns-set!)
+
+     (def (prep-module-code module code)
+       (gx#core-quote-syntax (gx#core-cons '%#begin code)
+      (gx#module-context-path module) module []))
+</pre>
+</div>
+
+
+<p>
+1
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Date: 2020-07-29 Wed 00:00</p>
+<p class="author">Author: Drew Crampsie</p>
+<p class="date">Created: 2020-07-30 Thu 20:43</p>
+</div>
+</body>
+</html>

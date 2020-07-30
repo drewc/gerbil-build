@@ -1,0 +1,723 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-07-30 Thu 17:57 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Build Tool</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="John Doe" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+// @license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&amp;dn=gpl-3.0.txt GPL-v3-or-Later
+<!--/*--><![CDATA[/*><!--*/
+     function CodeHighlightOn(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.cacheClassElem = elem.className;
+         elem.cacheClassTarget = target.className;
+         target.className = "code-highlighted";
+         elem.className   = "code-highlighted";
+       }
+     }
+     function CodeHighlightOff(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(elem.cacheClassElem)
+         elem.className = elem.cacheClassElem;
+       if(elem.cacheClassTarget)
+         target.className = elem.cacheClassTarget;
+     }
+    /*]]>*///-->
+// @license-end
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Build Tool</h1>
+<p>
+The <code>:std/make</code> library provides support for building source Gerbil
+projects. See also the <a href="file:///guide/build.md">guide</a>.
+</p>
+
+<p>
+::: tip usage (import :std/make) :::
+</p>
+
+<div id="outline-container-overview" class="outline-2">
+<h2 id="overview">Overview</h2>
+<div class="outline-text-2" id="text-overview">
+<p>
+By convention, Gerbil projects are built by invoking a <code>./build.ss</code>
+script, typically starting with <code>#!/usr/bin/env gxi</code> that defines a
+function <code>main</code> that will build the project when called with an empty
+list. The libraries documented below are meant to be used in such a
+script, to do most of the work in building your project. Note that if
+your project has syntax dependencies on low-level Gambit macros in
+<code>gambit/lib/_gambit#.scm</code>, you should import <code>:std/gambit-sharp</code> in your
+build script.
+</p>
+
+<p>
+The <code>:std/make</code> library exports a function <code>make</code> that will build your
+project, compiling files in automatically-detected dependency order. It
+takes a <i>build-spec</i> argument, followed by keyword arguments. The
+<i>build-spec</i> is a list of individual target specifications, described
+below. The keyword arguments specify some configuration settings, also
+described below.
+</p>
+
+<p>
+A trivial wrapper is available for simple projects, in the
+<code>:std/build-script</code> library, exporting a macro <code>defbuild-script</code>. The
+macro takes a <i>build-spec</i> first followed by keyword settings, and
+defines a function <code>main</code> in the context of the current file. The
+function <code>main</code>, when invoked with the argument <code>"compile"</code> or with no
+arguments, will compile the project in the current directory: The Gerbil
+<code>load-path</code> will be augmented with the current directory while compiling
+(by passing a <code>srcdir:</code> parameter to <code>make</code>), while the prefix from a
+<code>gerbil.pkg</code> file in the current directory (if defined) will be used (by
+passing a <code>prefix:</code> parameter to <code>make</code>).
+</p>
+</div>
+</div>
+
+<div id="outline-container-target-specifications" class="outline-2">
+<h2 id="target-specifications">Target specifications</h2>
+<div class="outline-text-2" id="text-target-specifications">
+<p>
+The <i>build-spec</i> passed to <code>make</code> or to <code>defbuild-script</code> is a list of
+individual target specifications. Each target specification can be:
+</p>
+
+<ul class="org-ul">
+<li>A string, which specifies a Scheme module. The <code>".ss"</code> extension is
+automatically added if no extension is specified. Dependencies will be
+automatically detected.</li>
+
+<li>A list of the form <code>(gxc: file (plist ...) opts ...)</code> or just
+<code>(gxc: file opts ...)</code>, where (a) the file is a string as above, (b)
+the optional plist allows to specify extra build options, and (c) the
+remainder of the options are passed to <code>gsc</code> while compiling the file.
+The only supported extra build options so far are:
+
+<ol class="org-ol">
+<li><code>extra-inputs:</code> followed by a list of extra inputs, e.g. files that
+are <code>include</code>&rsquo;d or otherwise <code>read</code> at build-time, and (2)
+<code>foreground:</code> followed by a boolean (default <code>#f</code>, so only useful
+value <code>#t</code>) that forces the Gerbil compilation to happen in the
+foreground, e.g. because it requires side-effects to the Gerbil
+compiler not available when invoking <code>gxc</code> but already done before
+calling <code>make</code>, such as having loaded <code>~~lib/_gambc#.scm</code> at
+syntax-expansion time.</li>
+</ol></li>
+
+<li>A list of the form <code>(gsc: file (plist ...) opts ...)</code> or just
+<code>(gsc: file opts ...)</code>, which is similar to <code>gxc:</code>, except the file is
+a raw Gambit Scheme file directly compiled with <code>gsc</code> and rather a
+Gerbil Scheme file first compiled to Gambit files by <code>gxc</code>. As for
+<code>gxc:</code> above, (a) the file is a string as above, (b) the optional
+plist allows to specify extra build options, and (c) the remainder of
+the options are passed to <code>gsc</code> while compiling the file. The only
+supported extra build option so far is: <code>extra-inputs:</code> followed by a
+list of extra inputs, e.g. files that are <code>include</code>&rsquo;d or otherwise
+<code>read</code> at build-time. Such a target is useful for FFI and other
+low-level interactions with the Gambit runtime. To integrate the
+Gambit Scheme definitions from that file into Gerbil Scheme, there
+must be a subsequent <code>ssi:</code> target, before any other Gerbil-invoking
+target is specified (any target but one starting with the <code>gsc:</code> or
+<code>static-include:</code> keyword).</li>
+
+<li>A list of the form <code>(static-include: file)</code> where the file is a C file
+(or C++, if Gambit was compiled in C++) that will be compiled into the
+application. Once again, a subsequent <code>ssi:</code> target is required, with
+only <code>gsc:</code> or <code>static-include:</code> targets in between.</li>
+
+<li>A list of the form <code>(ssi: file submodules ...)</code> where the file is a
+Scheme interface file. The <code>".ssi"</code> extension is automatically added
+to the file if no extension is specified. The specified <i>submodules</i>
+may be <code>gsc:</code> or <code>static-include:</code> target specification as above.
+Targets specified either immediately before the <code>ssi:</code> target or
+within as submodules are appended into a single list before
+processing. Dependencies specified in the <code>.ssi</code> file will be compiled
+and loaded before any of the submodule targets are compiled.</li>
+
+<li>A list of the form <code>(exe: file opts ...)</code> where the file is a Gerbil
+Scheme module source file (with the <code>".ss"</code> extension automatically
+added by default) that exports a function <code>main</code>. The file will be
+compiled by <code>gxc</code> with the provided options into an executable, that,
+when invoked, calls the <code>main</code> function with a single argument, the
+list of command-line parameters (excluding the <code>argv[0]</code> command
+location). Note that this executable will dynamically load libraries
+from your <code>GERBIL_PATH</code> and/or your <code>~/.gerbil/lib</code> as needed.</li>
+
+<li>A list of the form <code>(static-exe: file opts ...)</code> which is similar to
+the <code>exe:</code> case above, except that the executable will statically
+include all the compiled Gerbil code rather than dynamically load it
+from your Gerbil path, etc. Note that from the point of view of the
+&ldquo;C&rdquo; world, it is still a &ldquo;dynamically linked&rdquo; executable that is
+linked against the <code>libc</code>, <code>libgambit</code>, etc. &#x2014; only the Scheme code
+is statically compiled.</li>
+
+<li>A list of the form <code>(copy: file)</code> which specifies a file that will be
+copied to the Gerbil library path. It can be a precompiled C object,
+Scheme file, data file, etc., that your library uses and needs be
+present wherever your library is installed.</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-build-settings" class="outline-2">
+<h2 id="build-settings">Build Settings</h2>
+<div class="outline-text-2" id="text-build-settings">
+<p>
+The <code>make</code> function and the <code>defbuild-script</code> macro after it accept the
+following keyword arguments, that may configure how your project is
+built.
+</p>
+
+<ul class="org-ul">
+<li><code>srcdir:</code> specifies the top directory under which to find the source
+code for your project, such that if you specify a target <code>"foo/bar"</code>
+or <code>"foo/bar.ss"</code> then it will refer to a file <code>"foo/bar.ss"</code> under
+this directory. This argument is mandatory when calling <code>make</code>, and is
+the only mandatory settings argument. However, this argument is
+prohibited when using the <code>defbuild-script</code> macro, since the macro
+uses <code>(path-normalize (path-directory (this-source-file)))</code> to
+automatically extract this directory from the current <code>./build.ss</code>
+file containing it and pass it to <code>make</code> (and you cannot override it).
+You may use the same trick in your <code>./build.ss</code> if for some reason you
+don&rsquo;t use that macro. (The trick is similar to
+<code>$(realpath "$(dirname "${BASH_SOURCE[0]}")")</code> in <i>bash</i> or
+<code>$(realpath "$(dirname "$0")")</code> in <i>zsh</i>).</li>
+
+<li><code>prefix:</code> specifies a prefix to the path of your Gerbil modules. This
+prefix will affect how your modules are named and where they will be
+installed within your <i>libdir</i>. Thus, a prefix of <code>legs</code> means that a
+file <code>"foo/bar.ss"</code> will be compiled into a module <code>legs/foo/bar</code> that
+you can import with <code>(import :legs/foo/bar)</code> and that will be
+installed under your <i>libdir</i> as a bunch of files starting with the
+prefix <code>legs/foo/bar</code>. The default, <code>#f</code>, means that a prefix will be
+extracted from the the <code>package:</code> value in the <code>gerbil.pkg</code> file in
+the <code>srcdir</code>, if it is defined and a symbol, and otherwise no prefix
+at all (all module names must then be fully-qualified).</li>
+
+<li><code>libdir:</code> specifies the directory under which compiled library files
+will be installed. If left unspecified, the default <code>#f</code> designates
+the shell value of <code>$GERBIL_PATH/lib</code> if the according environment
+variable is defined, or else your <code>~/.gerbil/lib/</code> directory.</li>
+
+<li><code>bindir:</code> specifies the directory under which compiled executable
+files will be installed. If left unspecified, the default <code>#f</code>
+designates the shell value of <code>$GERBIL_PATH/bin/</code> if the according
+environment variable is defined, or else your <code>~/.gerbil/bin/</code>
+directory.</li>
+
+<li><code>force:</code> specifies a boolean that if true forces the recompilation of
+every target in the current build. If for some reason a subtle change
+causes the build system to incorrectly believe some targets are
+up-to-date when they are not, you can use <code>force: #t</code> to force a
+complete rebuild. Note that usually, this means that you failed to
+specify a dependency (for instance, by using <code>(include ...)</code> and not
+specifying the file in a <code>dep:</code> argument to a <code>(gxc: ...)</code> target). It
+may also be a bug in Gerbil, in which case, please report it.</li>
+
+<li><code>optimize:</code> specifies a boolean that if true tells Gerbil to optimize
+the code some more, which should result in faster code, at the cost of
+compilation taking more time. The default is <code>#t</code>.</li>
+
+<li><code>debug:</code> specifies one of <code>#f</code>, <code>env</code> or <code>src</code>, and controls how much
+debugging information Gerbil will include in the compiled file. The
+default is <code>env</code>. With <code>#f</code> Gerbil drops all debug information; with
+<code>env</code> it keeps a lot of information about the variables; with <code>src</code> it
+additionally keeps around the expanded source code in the compiled
+output. Each level makes debugging easier at the cost of larger
+output, and larger compilation time. In production, you probably want
+<code>#f</code> or maybe <code>env</code> if operators can sometimes debug there; for
+development, you probably want <code>src</code> for libraries you don&rsquo;t compile
+often, and <code>env</code> for code you compile over and over. Be sure to
+properly quote the symbol when passing it as argument to a function,
+as in <code>(make build-spec debug: 'src)</code>.</li>
+
+<li><code>static:</code> specifies a boolean that if true tells Gerbil to compile
+objects for inclusion in a static binary in addition to shared objects
+that can be dynamically loaded at the REPL. If you know you&rsquo;ll never
+generate a static binary from your project you can set it to <code>#f</code>, but
+if your project includes a static binary, or is a library that might
+be used in a static binary, you should leave it at the default <code>#t</code>,
+or explicitly set it to <code>#t</code>.</li>
+
+<li><code>static-debug:</code> specifies the same thing as <code>debug:</code> but for the
+statically linked objects that will be used to build static
+executables. The default is <code>#f</code>.</li>
+
+<li><code>verbose:</code> specifies a boolean or a real number. The default <code>#f</code>
+should print a minimal amount of information, mostly telling you which
+module is bein compiled and that&rsquo;s all. If any value but <code>#f</code>, some
+extra messages may be printed. If it is a number, even more messages
+may be printed (try up to 8 or 9).</li>
+
+<li><code>build-deps:</code> specifies the path to a file, by default under <i>srcdir</i>,
+that will store a cache of which files were built at what time from
+what dependencies, which can somewhat accelerate the build. If you
+have multiple projects in the same directory, i.e. invocations of
+<code>defbuild-script</code> or <code>make</code> with different <code>build-spec</code> arguments,
+then you need to have these invocations specify distinct <code>build-deps:</code>
+arguments to avoid clashes; otherwise projects will overwrite each
+other&rsquo;s cache.</li>
+
+<li><code>parallelize:</code> specifies the number of multiprocessor cores that
+Gerbil will attempt to use while compiling code. If it&rsquo;s a number <i>n</i>
+no less than 2, then Gerbil will spawn as many as <i>n</i> subprocesses to
+compile. If it&rsquo;s <code>0</code> or less, then Gerbil will not spawn processes to
+compile files from Gerbil <code>.ss</code> to Gambit <code>.scm</code> but compile them in
+the current image. It will still spawn processes for Gambit
+compilation as such. If it&rsquo;s <code>1</code>, then Gerbil will spawn a subprocess
+for the Gerbil compilation steps as well as for the Gambit compilation
+step, but only one process at a time. If it&rsquo;s <code>#f</code>, then no
+parallelism is used, same as <code>0</code>. If it&rsquo;s <code>#t</code> (the default), then the
+maximum number of CPUs is used, as detected from the Operating System,
+or overridden by the value of the environment variable
+<code>GERBIL_BUILD_CORES</code>, if defined and an integer.</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-interface" class="outline-2">
+<h2 id="interface">Interface</h2>
+<div class="outline-text-2" id="text-interface">
+</div>
+
+<div id="outline-container-make" class="outline-3">
+<h3 id="make">make</h3>
+<div class="outline-text-3" id="text-make">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (make build-spec settings-keyword-arguments ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Compile all parts of the project that are not up-to-date.
+</p>
+</div>
+</div>
+
+<div id="outline-container-shell-config" class="outline-3">
+<h3 id="shell-config">shell-config</h3>
+<div class="outline-text-3" id="text-shell-config">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (shell-config ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-env-cppflags" class="outline-3">
+<h3 id="env-cppflags">env-cppflags</h3>
+<div class="outline-text-3" id="text-env-cppflags">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (env-cppflags ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-env-ldflags" class="outline-3">
+<h3 id="env-ldflags">env-ldflags</h3>
+<div class="outline-text-3" id="text-env-ldflags">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (env-ldflags ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-include-gambit-sharp" class="outline-3">
+<h3 id="include-gambit-sharp">include-gambit-sharp</h3>
+<div class="outline-text-3" id="text-include-gambit-sharp">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (include-gambit-sharp ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-pkg-config" class="outline-3">
+<h3 id="pkg-config">pkg-config</h3>
+<div class="outline-text-3" id="text-pkg-config">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (pkg-config ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-pkg-config-libs" class="outline-3">
+<h3 id="pkg-config-libs">pkg-config-libs</h3>
+<div class="outline-text-3" id="text-pkg-config-libs">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (pkg-config-libs ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-pkg-config-cflags" class="outline-3">
+<h3 id="pkg-config-cflags">pkg-config-cflags</h3>
+<div class="outline-text-3" id="text-pkg-config-cflags">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (pkg-config-cflags ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-ldflags" class="outline-3">
+<h3 id="ldflags">ldflags</h3>
+<div class="outline-text-3" id="text-ldflags">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (ldflags ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+
+<div id="outline-container-cppflags" class="outline-3">
+<h3 id="cppflags">cppflags</h3>
+<div class="outline-text-3" id="text-cppflags">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (cppflags ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Please document me!
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-standard-package-build-script" class="outline-2">
+<h2 id="standard-package-build-script">Standard Package Build Script</h2>
+<div class="outline-text-2" id="text-standard-package-build-script">
+<p>
+::: tip usage (import :std/build-script) :::
+</p>
+</div>
+
+<div id="outline-container-defbuild-script" class="outline-3">
+<h3 id="defbuild-script">defbuild-script</h3>
+<div class="outline-text-3" id="text-defbuild-script">
+<p>
+::: tip usage
+</p>
+
+<pre class="example">
+  (defbuild-script build-spec settings-keyword-arguments ...)
+</pre>
+
+<p>
+:::
+</p>
+
+<p>
+Define a <code>main</code> function that will built the project. See above.
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: John Doe</p>
+<p class="date">Created: 2020-07-30 Thu 17:57</p>
+</div>
+</body>
+</html>
