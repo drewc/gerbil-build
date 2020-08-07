@@ -1,0 +1,1624 @@
+#+TITLE: Building Gerbil Packages
+#+begin_quote
+Drew Crampsie @drewc 14:28
+
+Ok, dammit, I have so been trying to avoid becoming a major gerbil contributor
+but I think that was self-deprecation mixed with lazy stoner who is overworked
+somewhat already lol ... not understanding that it saves time and effort to save
+time and effort ... silly man.
+#+end_quote
+
+
+How things are built matters. In order to save time and effort we do not want to
+rebuild everything each character change. At the same time, we want to be
+liberal and not enforce a style or layout upon developers.
+
+
+* ~make.ss~: the maker of makefiles
+
+It seems that there is one [[https://github.com/vyzo/gerbil/blob/master/src/std/make.ss][middleman]] that acts as a go between. There is a
+[[https://github.com/vyzo/gerbil/blob/master/doc/reference/make.md][reference]] on it, and a [[https://github.com/vyzo/gerbil/blob/master/doc/guide/build.md][guide]] on building as well. I suppose these things are
+important to developers!
+
+
+Using the reference we'll literately re-create the middleman and document/test
+in the guide?
+
+#+begin_src shell
+cd ~/src/gerbil-build/doc/
+cp ~/src/gerbil/doc/reference/make.md .
+pandoc -o make.org make.md
+#+end_src
+
+Perhaps. For now we'll simple inline things as the thoughts spring up.
+
+
+* ~/make/gxc~ Compile to a made library
+
+** Step 1: Compile a file to a library
+
+Let us create a file, compile to the right spot, and run it.
+
+#+begin_src scheme :tangle "./test/hello.ss" :mkdir yes
+package: drewc
+(export hello)
+
+(def (hello) "Hello World")
+#+end_src
+
+#+begin_src scheme :tangle test/make1.ss
+  (import :gerbil/compiler :std/srfi/13)
+  ;; (export #t)
+
+  (def gerbil-path (getenv "GERBIL_PATH" "~/.gerbil"))
+  (def libdir (string-append gerbil-path "/lib"))
+  (def (module-package ctx)
+    (let (id (symbol->string (gx#expander-context-id ctx)))
+      (cond ((string-rindex id #\/)
+             => (lambda (x) (substring id 0 x)))
+            (#t ""))))
+  (def (ss-file-libdir file)
+    (string-append libdir "/" (module-package (gx#import-module file))))
+
+  (def (make-ss file)
+      (compile-file file
+                    [output-dir:
+                     libdir
+                     invoke-gsc: #t
+                  ;   keep-scm: #f
+                   ;  generate-ssxi: #t
+                     verbose: #t
+                     ]))
+
+#+end_src
+
+Test it out.
+
+#+begin_src scheme :tangle test/test-hello.ss
+  (import :drewc/hello :std/test)
+  (check (hello) => "Hello World")
+
+#+end_src
+
+#+begin_src shell :results output code
+  rm ~/.gerbil/lib/drewc/hello*
+  gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+      -e '(make-ss "~/src/gerbil-build/test/hello.ss")' \
+      -e '(load "~/src/gerbil-build/test/test-hello.ss")'
+#+end_src
+
+#+begin_src shell
+compile ~/src/gerbil-build/test/hello.ss
+compile drewc/hello
+compile ~/.gerbil/lib/drewc/hello__0.scm
+invoke gsc (gsc -:i8,f8,-8,t8 ~/.gerbil/lib/drewc/hello__0.scm)
+compile ~/.gerbil/lib/drewc/hello__rt.scm
+invoke gsc (gsc -:i8,f8,-8,t8 ~/.gerbil/lib/drewc/hello__rt.scm)
+compile ~/.gerbil/lib/drewc/hello.ssi
+... check (hello) is equal? to "Hello World"
+#+end_src
+
+
+
+*** No package?
+
+What happens if it has no package?
+#+begin_src scheme :tangle "./test/hello-no-package.ss" :mkdir yes
+(export hello)
+
+(def (hello) "Hello World... NOT!")
+#+end_src
+
+#+begin_src scheme :tangle test/test-hello-no-package.ss
+  (import :hello-no-package :std/test)
+  (check (hello) => "Hello World... NOT!")
+#+end_src
+
+#+begin_src shell :results output code
+  rm ~/.gerbil/lib/hello-no-package*
+  gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+      -e '(make-ss "~/src/gerbil-build/test/hello-no-package.ss")'\
+      -e '(load "~/src/gerbil-build/test/test-hello-no-package.ss")'
+#+end_src
+
+#+begin_src shell
+compile ~/src/gerbil-build/test/hello-no-package.ss
+compile hello-no-package
+compile ~/.gerbil/lib/hello-no-package__0.scm
+invoke gsc (gsc -:i8,f8,-8,t8 ~/.gerbil/lib/hello-no-package__0.scm)
+compile ~/.gerbil/lib/hello-no-package__rt.scm
+invoke gsc (gsc -:i8,f8,-8,t8 ~/.gerbil/lib/hello-no-package__rt.scm)
+compile ~/.gerbil/lib/hello-no-package.ssi
+... check (hello) is equal? to "Hello World... NOT!"
+#+end_src
+
+** Step 2: Crib ~gxc-compile~ from Fare
+
+#+begin_src scheme :noweb-ref make-gxc-imports
+  (import :gerbil/compiler :std/misc/path :std/misc/list
+        :std/misc/concurrent-plan)
+#+end_src
+
+*** The Struct 
+ We need a ~settings~ struct to start off with. We'll make it almost identical
+ save for renaming ~prefix~ to ~package~.
+
+ #+begin_src scheme :noweb-ref settings-struct
+    ;;; Settings: see details in doc/reference/make.md
+    (defstruct settings
+      (srcdir libdir bindir package force optimize debug static static-debug verbose build-deps
+       libdir-prefix parallelize)
+      transparent: #t constructor: :init!)
+
+   (def current-make-settings (make-parameter #f))
+ #+end_src
+
+ One of the reasons behind this is to use many cores while compiling.
+
+ #+begin_src scheme :noweb-ref gerbil-build-cores
+   (def (gerbil-build-cores)
+     (with-catch (lambda (_) (##cpu-count)) (lambda () (string->number (getenv "GERBIL_BUILD_CORES")))))
+ #+end_src
+
+ In the init things need to change as well.
+
+
+ #+begin_src scheme :noweb-ref settings-init
+   (defmethod {:init! settings}
+    (lambda (self
+        srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+        package: (package_ #f) force: (force? #f)
+        optimize: (optimize #t) debug: (debug 'env)
+        static: (static #t) static-debug: (static-debug #f)
+        verbose: (verbose #f) build-deps: (build-deps_ #f)
+        parallelize: (parallelize_ #t))
+      (def gerbil-path (getenv "GERBIL_PATH" "~/.gerbil"))
+      (def srcdir (or srcdir_ (error "srcdir must be specified")))
+      (def libdir (or libdir_ (path-expand "lib" gerbil-path)))
+      (def bindir (or bindir_ (path-expand "bin" gerbil-path)))
+      (def package (and package_ (if (symbol? package_) (symbol->string package_) package_)))
+      (def libdir-prefix (if package (path-expand package libdir) libdir))
+      (def build-deps (path-expand (or build-deps_ "build-deps") srcdir))
+      (def parallelize (if (eq? parallelize_ #t) (gerbil-build-cores) (or parallelize_ 0)))
+      (struct-instance-init!
+        self
+        srcdir libdir bindir package force? optimize debug static static-debug verbose build-deps
+        libdir-prefix parallelize))
+    rebind: #t)
+ #+end_src
+
+ Now for the compilations. Rather than have it all chunked together I'll break it
+ into parts I can grasp a wee bit more.
+
+*** ~gxc-outputs~: the end of the beginning
+    :PROPERTIES:
+    :CUSTOM_ID: gxc_outputs_begin
+    :END:
+
+ Strangely enough, it seems that the entire reason I started this was an error
+ that may get taken care of by redefining ~gxc-outputs~.
+
+ Essentially, I want to return a list of the files ~gxc~ transpiles to, and any
+ static files that are output.
+
+ I need to know a few paths
+  1) The source code path
+  2) The library path
+  3) The static path
+
+**** Source path
+  The first is easy.
+
+ #+begin_src scheme :noweb-ref source-path
+   (def (source-path mod ext settings)
+     (path-expand (path-default-extension mod ext) (settings-srcdir settings)))
+ #+end_src
+
+**** Library Path and Packages: The end all be all
+
+ The compiler can put the compiled files in different locations that all depend
+ on the package of that source file.
+
+ We call a source file a ~mod~. This is a string like "test/hello".
+
+ Every source file compiled by ~gxc~ is also a [[https://github.com/vyzo/gerbil/blob/master/src/gerbil/expander/module.ss][module]]. It may have a different
+ super-package based on the ~package:~ keyword in the file or in a local or
+ parent ~gerbil.pkg~.
+ 
+ The packages postfix to the library path then together they prefix the result
+ location. It also may not exist.
+
+ These are how they are discovered, in order.
+
+ 1) The ~module-id~ of the module, or..
+ 2) The ~gerbil.pkg~ in the directory containing the source file itself OR any
+    parent directories up to ~srcdir:~. If not...
+ 3) The ~package:~ option to the make ~settings~.
+
+
+ Let's add a few test files
+
+   A toplevel ~test/gerbil.pkg~
+   #+begin_src scheme :tangle test/gerbil.pkg
+   (package: drewc/build-test)
+   #+end_src
+
+   Another one in ~test/sub/gerbil.pkg~.
+   #+begin_src scheme :tangle test/sub/gerbil.pkg
+   (package: drewc/take-on-me)
+   #+end_src
+
+  A source file ~test/sub/goodbye.ss~
+ 
+   #+begin_src scheme :tangle "./test/sub/goodbye.ss"
+   (export gbye)
+
+   (def (gbye) "Goodbye World")
+   #+end_src
+
+***** ~mod-module~: Every ~.ss~ is a module
+
+      An ~-id~ is a symbol, a ~-package~ a string.
+
+#+begin_src scheme :noweb-ref mod-modules
+  (def mod-modules (make-hash-table)) ;;; cache
+  (def (mod-module mod (settings (current-make-settings)) (reload? #f))
+    (let (v (hash-ref mod-modules mod (void)))
+      (if (and (not (void? v)) (not reload?)) v
+          (let* ((src (source-path mod ".ss" settings))
+                 (m (and (file-exists? src) (gx#import-module src reload?))))
+            (begin0 m (hash-put! mod-modules mod m))))))
+
+  (def module-id gx#expander-context-id)
+  (def module-id-set! gx#expander-context-id-set!)
+ #+end_src
+
+(For our ~"test/hello"~ mod, ~test/sub/gbye~ and ~"test/hello-no-package"~, it is
+correct.
+
+  - ~"test/hello"~ :: has ~package: drewc~ at the top. That defines the
+                      containing package as ~drewc~, and since this file is
+                      called ~hello~, the id is ~drewc/hello~.
+  - ~"test/hello-no-package"~ :: It is ~drewc/build-test/hello-no-package~ with the
+       prefix coming from the ~test/gerbil.pkg~
+  -  ~"test/sub/goodbyebye:~  :: ~drewc/take-on-me~ is the container from
+       ~test/sub/gerbil.pkg~
+
+#+begin_src scheme :tangle test/test-hello-goodbye.ss
+  (import :std/test)
+  (def test-settings (settings srcdir: "~/src/gerbil-build"))
+
+  (def test/hello-module (mod-module "test/hello" test-settings))
+  (def test/sub/goodbye-module (mod-module "test/sub/goodbye" test-settings #t))
+  (def test/hello-no-package-module (mod-module "test/hello-no-package" test-settings))
+
+  (check (module-id test/hello-module) => 'drewc/hello)
+  (check (module-id test/sub/goodbye-module) => 'drewc/take-on-me/goodbye)
+  (check (module-id test/hello-no-package-module)
+         => 'drewc/build-test/hello-no-package)
+#+end_src
+
+***** ~mod-core-module~: The module has no root
+
+ Finding the actual package can be a problem if we have it laid out on the
+ filesystem where any of the parents have a ~gerbil.pkg~.
+
+ For example, a git subtree that you want to build should not change based on
+ the fact that you store it in another directory.
+
+  We'll lay out a new project and a file like this:
+
+    *./test/new-project/hello-no-package.ss*
+
+  Now, without any package and without a ~gerbil.pkg~, when we try to make that
+  project, what comes up?
+
+
+#+begin_src scheme :tangle "./test/new-project/new-hello-no-package.ss" :mkdirp yes
+(export hello)
+(def (hello) "Hello World... New Project!")
+#+end_src
+
+
+#+begin_src scheme
+   (import :std/test)
+  (def test-new-project-settings (settings srcdir: "~/src/gerbil-build/test/new-project")) 
+
+   (def test/new-project-hello-no-package-module
+     (mod-module "new-hello-no-package" test-new-project-settings))
+
+   ;;; This passes the test, but fails at what we want
+   (check (module-id test/new-project-hello-no-package-module)
+          => 'drewc/build-test/new-project/new-hello-no-package)
+#+end_src
+
+The importer always looks towards parent directories for a package. That makes
+sense as it cannot know where to stop and always tried to succeed. That is a
+wonderful thing that makes life so much easier, but does result in some antics.
+
+As luck would have it, *vyzo* has taken care of the details in
+~gx#core-read-module~.
+
+#+begin_src scheme :noweb-ref mod-core-modules
+  (def mod-core-modules (make-hash-table))
+  (def (mod-core-module mod (settings (current-make-settings)) (reload? #f))
+    ;; => (values prelude module-id module-ns body)
+    (def (mrm)
+      (let (v (if reload? (void) (hash-ref mod-core-modules mod (void))))
+        (if (not (void? v)) v
+            (let* ((src (path-force-extension mod ".ss"))
+                   (rm (and (file-exists? src) (gx#core-read-module src))))
+              (begin0 rm (hash-put! mod-core-modules mod rm))))))
+    (let ((srcdir (path-normalize (settings-srcdir settings)))
+          (cd (path-normalize (current-directory))))
+      (if (equal? srcdir cd) (mrm)
+          (parameterize ((current-directory srcdir))
+            (mrm)))))
+
+  (def core-module-prelude (cut values-ref <> 0))
+  (def core-module-id (cut values-ref <> 1))
+  (def core-module-ns (cut values-ref <> 2))
+  (def core-module-code (cut values-ref <> 3))
+ #+end_src
+
+With that we can now see that this has no package.
+
+#+begin_src scheme
+  (import :std/test)
+
+  (def test/new-project-hello-no-package-core-module
+    (mod-core-module "new-hello-no-package" test-new-project-settings))
+
+  (check (core-module-id test/new-project-hello-no-package-core-module)
+         => 'new-hello-no-package)
+#+end_src
+
+***** Some testing and asking the compiler where it places things
+
+What happens when we compile that module as is?
+
+#+begin_src scheme :tangle test/test-compile-as-is.ss
+ (def test-new-project-settings (settings srcdir: "~/src/gerbil-build/test/new-project"))
+
+  (def test/new-project-hello-no-package-module
+    (mod-module "new-hello-no-package" test-new-project-settings))
+#+end_src
+
+#+begin_src shell :results output code
+  rm ~/.gerbil/lib/drewc/build-test/new-project/new-hello-no-package*
+  gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+      -e '(load "~/src/gerbil-build/test/test-make-gxc.ss")' \
+      -e '(load "~/src/gerbil-build/test/test-compile-as-is.ss")' \
+      -e '(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'
+#+end_src
+
+
+It ends up in *~/.gerbil/lib/drewc/build-test/new-project/*. We knew that.
+
+#+begin_src shell
+# => [...]
+compile drewc/build-test/new-project/new-hello-no-package
+#+end_src
+
+
+If we set the id to ~new-hello-no-package~, say from the ~core-module-id~?
+
+#+begin_src scheme :tangle test/test-compile-set-id.ss
+  (def test/new-project-hello-no-package-core-module
+      (mod-core-module "new-hello-no-package" test-new-project-settings))
+
+  (set! (module-id test/new-project-hello-no-package-module)
+        (core-module-id test/new-project-hello-no-package-core-module))
+#+end_src
+
+
+
+Awesome! That should now means that it tests out.
+
+#+begin_src scheme :tangle test/test-new-hello-no-package.ss
+(import :std/test :new-hello-no-package)
+(check (hello) => "Hello World... New Project!")
+#+end_src
+
+#+begin_src shell :results output code
+    rm ~/.gerbil/lib/drewc/new-hello-no-package*
+    gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+        -e '(load "~/src/gerbil-build/test/test-make-gxc.ss")' \
+        -e '(load "~/src/gerbil-build/test/test-compile-as-is.ss")' \
+        -e '(load "~/src/gerbil-build/test/test-compile-set-id.ss")' \
+        -e '(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")' \
+        -e '(load "~/src/gerbil-build/test/test-new-hello-no-package.ss")'
+#+end_src
+#+begin_src shell
+# =>
+... check (hello) is equal? to "Hello World... New Project!"
+#+end_src
+
+
+***** ~mod-module-id~: Finally, we know where it is and how to set it
+
+#+begin_src scheme :noweb-ref mod-module-id
+  (def (mod-module-id mod (settings (current-make-settings)))
+    (let ((mcm (mod-core-module mod settings))
+          (sp (settings-package settings)))
+      ;; If the core module package is the same as the mod that means we could not
+      ;; find a package.
+      (if (equal? mod (symbol->string (core-module-id mcm)))
+        ;; If we do not have a toplevel package we are the package.
+        (if (not sp) (string->symbol mod)
+            ;; otherwise add it as a super and return
+            (string->symbol (path-expand mod sp)))
+        ;; Otherwise the mrm has the right id
+        (core-module-id mcm))))
+ #+end_src
+
+Yes! Now we can specify where things go based on where they are.
+
+#+begin_src scheme
+  (import :std/test)
+  (let* ((mod "new-hello-no-package")
+         (modn (path-expand mod "new-project"))
+         (modtn (path-expand modn "test"))
+         (newsetdir "~/src/gerbil-build/test/new-project")
+         (testsetdir
+          (path-directory (path-strip-trailing-directory-separator newsetdir)))
+         (srcsetdir
+          (path-directory (path-strip-trailing-directory-separator testsetdir))))
+
+    ;;  make'ing it from that directory should have no container
+
+    (check (mod-module-id mod (settings srcdir: newsetdir)) => 'new-hello-no-package)
+
+    ;;  make'ing it from the parent picks up the parents gerbil.pkg
+
+    (check (mod-module-id modn (settings srcdir: srcsetdir))
+           => 'drewc/build-test/new-project/new-hello-no-package)
+
+    ;;  make'ing it from the parent parent's parent should also picks up the
+    ;;  parents gerbil.pkg
+
+    (check (mod-module-id modtn (settings srcdir: testsetdir))
+           => 'drewc/build-test/new-project/new-hello-no-package))
+#+end_src
+
+**** ~namespace:~ and ~prelude~: Two other things that are set for modules
+
+       The compiler also picks up those keywords from a parent so that even
+       setting the ~module-id~ can leave us with some surprises.
+
+       When we name a hello something else, we can import it as such.
+
+ #+begin_src scheme :tangle test/test-compile-set-id-to-foobarbaz.ss
+   (def test/new-project-hello-no-package-core-module
+       (mod-core-module "new-hello-no-package" test-new-project-settings))
+
+   (set! (module-id test/new-project-hello-no-package-module) 'foobarbaz)
+ #+end_src
+
+
+ The issue is that the namespace is not set correctly. For example, the ~test/hello.ss~ file.
+
+
+ #+begin_src scheme
+   (import :std/test :drewc/hello)
+   (check (drewc/hello#hello) => "Hello World")
+ #+end_src
+
+ But, for that ~:foobarbaz~ it's quite different.
+
+ #+begin_src scheme :tangle test/test-improper-namespace.ss
+   (import :std/sugar :std/test :foobarbaz)
+   (check (hello) => "Hello World... New Project!")
+
+   ;;; This test passes but it shoudn't
+   (check (try (foobarbaz#hello) (catch _ #f)) => #f)
+
+   ;;; because it's in another namespace
+   (check (drewc/build-test/new-project/new-hello-no-package#hello)
+          => "Hello World... New Project!")
+ #+end_src
+
+ #+begin_src shell :results output code
+   rm ~/.gerbil/foobarbaz*
+   gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-make-gxc.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-compile-as-is.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-compile-set-id-to-foobarbaz.ss")' \
+       -e '(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'\
+       -e '(load "~/src/gerbil-build/test/test-improper-namespace.ss")' \
+ #+end_src
+
+ #+begin_src shell
+ # =>
+ ... check (hello) is equal? to "Hello World... New Project!"
+ ... check (try (foobarbaz#hello) (catch _ #f)) is equal? to #f
+ ... check (drewc/build-test/new-project/new-hello-no-package#hello) is equal? to "Hello World... New Project!"
+ #+end_src
+
+ That's because of the ~module-namespace~.
+
+ #+begin_src scheme :noweb-ref module-ns
+   (def module-ns gx#module-context-ns)
+   (def module-ns-set! gx#module-context-ns-set!)
+ #+end_src
+
+ If we set it, we should get it?
+
+ #+begin_src scheme :tangle test/test-compile-set-id-and-ns-to-foobarbaz.ss
+   (def test/new-project-hello-no-package-core-module
+       (mod-core-module "new-hello-no-package" test-new-project-settings))
+
+   (set! (module-id test/new-project-hello-no-package-module) 'foobarbaz)
+   (set! (module-ns test/new-project-hello-no-package-module) "foobarbaz")
+ #+end_src
+
+ Here's the test ...
+
+
+ #+begin_src scheme :tangle test/test-proper-namespace.ss
+   (import :std/sugar :std/test :foobarbaz)
+   (check (hello) => "Hello World... New Project!")
+
+   ;;; This test passes!
+
+   (check (foobarbaz#hello) => "Hello World... New Project!")
+
+   ;;; because it's not in another namespace
+   (check (try (drewc/build-test/new-project/new-hello-no-package#hello)
+            (catch _ #f)) => #f)
+ #+end_src
+
+ ... but our test seems to fail. I think that's because the body is [[https://github.com/vyzo/gerbil/blob/master/src/gerbil/expander/module.ss#L173][set before]] we
+ set the namespace.
+
+ We'll nick that.
+
+ #+begin_src scheme :noweb-ref prep-module-code
+   (def (prep-module-code module code)
+     (gx#core-quote-syntax (gx#core-cons '%#begin code)
+    (gx#module-context-path module) module []))
+ #+end_src
+
+ And?
+
+ #+begin_src scheme :tangle test/test-compile-set-body-foobarbaz.ss
+   (def test/new-project-hello-no-package-core-module
+       (mod-core-module "new-hello-no-package" test-new-project-settings))
+
+   (set! (module-id test/new-project-hello-no-package-module) 'foobarbaz)
+   (set! (module-ns test/new-project-hello-no-package-module) "foobarbaz")
+
+   (set! (gx#&module-context-code test/new-project-hello-no-package-module)
+     (prep-module-code test/new-project-hello-no-package-module (core-module-code test/new-project-hello-no-package-core-module)))
+
+ #+end_src
+
+
+ Nope, still doesn't work. That's ok, the code knows.
+
+***** ~(def module-id [...]~
+
+ #+begin_src scheme :noweb-ref inline-module-id
+   (def module-name (path-strip-directory (path-strip-extension path)))
+   (def module-id
+     ;; If we provide _id, use it(d)!
+     (or _id
+       ;; If the core module package is the same as the mod that means we could not
+       ;; find a package.
+       (if (not (equal? module-name (symbol->string id))) id
+         ;; If we do not have a toplevel package we are the id.
+         (if (not _package) id
+             ;; otherwise add it as the package as a supercontainer and return
+             (string->symbol (path-expand module-name (symbol->string _package)))))))
+  #+end_src
+
+***** ~(def module-ns [...]~
+
+ #+begin_src scheme :noweb-ref inline-module-ns
+ (def module-ns (or _ns (if (equal? module-name ns) (symbol->string module-id) ns)))
+ #+end_src
+
+***** ~prep-import-module~
+
+ This [[https://github.com/vyzo/gerbil/blob/master/src/gerbil/expander/module.ss#L257][is cribbed as well]]. Because the compiler does not re-import it, we set it
+ here and that's that. It also means we get rid of almost all the ~mod-*~ and
+ ~mod-core~ code.
+
+  #+begin_src scheme :tangle :tangle test/import.ss :noweb yes :noweb-ref prep-import-module
+        ;;; -*- Gerbil -*-
+        ;;; (C) vyzo at hackzen.org, me at drewc.ca
+        (import :gerbil/expander/module :std/lazy)
+        (def (prep-import-module
+              rpath
+              srcdir: (srcdir "/")
+              package: (_package #f)
+              id: (_id #f)
+              namespace: (_ns #f)
+              pre: (_pre #f)
+              (reload? #f))
+
+          (def (import-source path)
+            (def mod-path (path-normalize path (or srcdir #f) (or srcdir "")))
+
+            (when (member path (gx#current-expander-path))
+              (error "Cyclic expansion" path))
+            (parameterize ((gx#current-expander-context (gx#core-context-root))
+                           (gx#current-expander-marks [])
+                           (gx#current-expander-phi 0)
+                           (gx#current-expander-path
+                            (cons path (gx#current-expander-path)))
+                           (gx#current-import-expander-phi #f)
+                           (gx#current-export-expander-phi #f))
+              (let-values (((pre id ns body)
+                            (gx#core-read-module mod-path)))
+                <<inline-module-id>>
+                <<inline-module-ns>>
+                (let* ((prelude
+                        (cond
+                         ((gx#prelude-context? pre) pre)
+                         ((gx#module-context? pre)
+                          (gx#core-module->prelude-context pre))
+                         ((string? pre)
+                          (gx#core-module->prelude-context
+                           (core-import-module pre)))
+                         ((not pre)
+                          (or (gx#current-expander-module-prelude)
+                              (gx#make-prelude-context #f)))
+                         (else
+                          (error "Cannot import module; unknown prelude" rpath pre))))
+                       (ctx
+                        (gx#make-module-context module-id prelude module-ns path))
+                       (body
+                       (gx#core-expand-module-begin body ctx))
+                       (body
+                        (gx#core-quote-syntax
+                         (gx#core-cons '%#begin body)
+                         path ctx [])))
+                   (set! (gx#&module-context-e ctx)
+                     (delay (gx#eval-syntax* body)))
+                  (set! (gx#&module-context-code ctx)
+                    body)
+                  (hash-put! (gx#current-expander-module-registry) path ctx)
+                  (hash-put! (gx#current-expander-module-registry) id ctx)
+                  ctx))))
+
+          (let (npath (path-normalize rpath #f))
+            (cond
+             ((and (not reload?)
+                   (hash-get (gx#current-expander-module-registry) npath))
+              => values)
+             (else (parameterize ((current-directory (or srcdir (current-directory))))
+                     (import-source (path-normalize rpath #f)))))))
+
+ #+end_src
+
+
+
+***** Time to test!
+
+
+ #+begin_src scheme :tangle test/test-compile-prep-foobarbaz.ss
+   (import :std/test)
+   (def test/foobarbaz-module
+     (prep-import-module
+      (source-path "new-hello-no-package" ".ss" test-new-project-settings)
+      srcdir: (settings-srcdir test-new-project-settings)
+      id: 'foobarbaz #t))
+
+   (check (module-id test/foobarbaz-module) => 'foobarbaz)
+
+
+ #+end_src
+
+ #+begin_src shell :results output code
+   rm ~/.gerbil/lib/foobarbaz*
+   gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-make-gxc.ss")' \
+       -e '(load "~/src/gerbil-build/test/import.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-compile-as-is.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-compile-prep-foobarbaz.ss")' \
+       -e '(make-ss "~/src/gerbil-build/test/new-project/new-hello-no-package.ss")'\
+       -e '(load "~/src/gerbil-build/test/test-proper-namespace.ss")' \
+ #+end_src
+
+
+ Yes! It worked.
+
+ #+begin_src shell
+ # =>
+ ... check (hello) is equal? to "Hello World... New Project!"
+ ... check (foobarbaz#hello) is equal? to "Hello World... New Project!"
+ ... check (try (drewc/build-test/new-project/new-hello-no-package#hello) (catch _ #f)) is equal? to #f
+ #+end_src
+
+
+ #+begin_src scheme :tangle "./test/new-project/sub/foo.ss" :mkdirp yes
+ (export hello)
+ (def (hello) "Hello World... New Project!")
+ #+end_src
+ #+RESULTS:
+
+
+***** Prelude and Postlude: Putting it all together
+
+      The only thing we're missing is a way to set a prelude in the make
+      settings. In fact, we don't set the namespace there either.
+
+      Let's unite things. We'll create a ~settings-gerbil.pkg~ accessor.
+
+ #+begin_src scheme :noweb-ref unite-settings-struct
+   ;;; Settings: see details in doc/reference/make.md
+   (defstruct settings
+     (srcdir libdir bindir force optimize debug static
+             static-debug verbose build-deps parallelize gerbil.pkg)
+     transparent: #t constructor: :init!)
+
+   (def current-make-settings (make-parameter #f))
+ #+end_src
+
+
+ #+begin_src scheme :noweb-ref unite-settings-init
+   (def (read-gerbil.pkg-plist srcdir)
+     (with-catch
+      false (lambda () (call-with-input-file (path-expand "gerbil.pkg" srcdir) read))))
+
+   (defmethod {:init! settings}
+    (lambda (self
+        srcdir: (srcdir_ #f) libdir: (libdir_ #f) bindir: (bindir_ #f)
+        gerbil.pkg: (gxpkg_ #f) force: (force? #f)
+        optimize: (optimize #t) debug: (debug 'env)
+        static: (static #t) static-debug: (static-debug #f)
+        verbose: (verbose #f) build-deps: (build-deps_ #f)
+        parallelize: (parallelize_ #t))
+      (def gerbil-path (getenv "GERBIL_PATH" "~/.gerbil"))
+      (def srcdir (or srcdir_ (error "srcdir must be specified")))
+      (def gerbil.pkg (or gxpkg_ (read-gerbil.pkg-plist srcdir_ )))
+      (def libdir (or libdir_ (path-expand "lib" gerbil-path)))
+      (def bindir (or bindir_ (path-expand "bin" gerbil-path)))
+      (def build-deps (path-expand (or build-deps_ "build-deps") srcdir))
+      (def parallelize (if (eq? parallelize_ #t) (gerbil-build-cores) (or parallelize_ 0)))
+      (struct-instance-init!
+        self
+        srcdir libdir bindir force? optimize debug static static-debug verbose build-deps
+        parallelize gerbil.pkg))
+      rebind: #t)
+
+   (def (settings-gerbil.pkg-pgetq s k (nope #f))
+     (let (plist (settings-gerbil.pkg s))
+       (if (not plist) nope (pgetq plist k nope))))
+
+   (def settings-package (cut settings-gerbil.pkg-pgetq <> package:))
+   (def settings-namespace (cut settings-gerbil.pkg-pgetq <> namespace:))
+   (def settings-prelude (cut settings-gerbil.pkg-pgetq <> prelude:))
+ #+end_src
+
+
+ Now that we've got that taken care of, let's do preludes.
+
+"As of Gerbil ~v0.16-DEV-259-g13646d64~ gerbil comes with a custom language
+prelude, ~:gerbil/polydactyl~, that treats square brackets as plain parentheses
+instead of the reader expanding them to @list forms. The language is otherwise
+the same as ~:gerbil/core~."
+--https://cons.io/guide/intro.html#core-gerbil-variants
+
+
+ #+begin_src scheme :tangle "./test/prelude/hello.ss" :mkdirp yes
+ (export hello)
+
+ (def (hello) [list . '("Hello World" 2 3)])
+ #+end_src
+
+Without any prelude, that should return a list with a procedure as its member.
+
+#+begin_src scheme :tangle "./test/prelude-no-prelude.ss"
+    (def test-no-prelude-settings (settings srcdir: "~/src/gerbil-build/test/prelude"))
+
+    (def test/hello-no-prelude-module
+      (prep-import-module
+       (source-path "hello" ".ss" test-no-prelude-settings)
+       srcdir: (settings-srcdir test-no-prelude-settings)
+       package: 'no-prelude
+       namespace: 'np))
+#+end_src
+
+#+begin_src scheme :tangle ./test/test-prelude-no-prelude.ss
+  (import :no-prelude/hello :std/test)
+  (check ((car (hello)) (cadr (hello))) => '("Hello World"))
+#+end_src
+
+It works, of course, because this is nothing new.
+
+ #+begin_src shell
+ ... check ((car (np#hello))) is equal? to "Hello World"
+ #+end_src
+
+Let's set a prelude.
+
+ #+begin_src scheme :tangle "./test/prelude/prehello.ss" :mkdirp yes
+ #lang :gerbil/polydactyl
+ ;;; does not work? prelude: :gerbil/polydactyl
+ (export hello)
+
+ (def (hello) [list . ("Hello World" 2 3)])
+ #+end_src
+
+#+begin_src scheme :tangle "./test/no-prelude-prelude.ss"
+  (def test/hello-no-prelude-prelude-module
+    (prep-import-module
+     (source-path "prehello" ".ss" test-no-prelude-settings)
+     srcdir: (settings-srcdir test-no-prelude-settings)
+     package: 'no-prelude
+     namespace: 'np))
+#+end_src
+
+#+begin_src scheme :tangle ./test/test-no-prelude-prehello.ss
+  (import :no-prelude/prehello :std/test)
+  (check (car (hello)) =>"Hello World")
+#+end_src
+
+
+ #+begin_src shell :results output code
+   rm -rf ~/.gerbil/lib/no-prelude ~/.gerbil/lib/drewc/build-test/prelude/
+   gxi -e '(load "~/src/gerbil-build/test/make1.ss")' \
+       -e '(load "~/src/gerbil-build/test/test-make-gxc.ss")' \
+       -e '(load "~/src/gerbil-build/test/import.ss")' \
+       -e '(load "~/src/gerbil-build/test/prelude-no-prelude.ss")' \
+       -e '(load "~/src/gerbil-build/test/no-prelude-prelude.ss")' \
+       -e '(make-ss "~/src/gerbil-build/test/prelude/prehello.ss")'\
+       -e '(load "~/src/gerbil-build/test/test-no-prelude-prehello.ss")'
+ #+end_src
+
+ #+RESULTS:
+ #+begin_src shell
+ compile ~/src/gerbil-build/test/prelude/prehello.ss
+ compile no-prelude/prehello
+ compile ~/.gerbil/lib/no-prelude/prehello__0.scm
+ invoke gsc (gsc -:i8,f8,-8,t8 ~/.gerbil/lib/no-prelude/prehello__0.scm)
+ compile ~/.gerbil/lib/no-prelude/prehello__rt.scm
+ invoke gsc (gsc -:i8,f8,-8,t8 ~/.gerbil/lib/no-prelude/prehello__rt.scm)
+ compile ~/.gerbil/lib/no-prelude/prehello.ssi
+ ... check (car (hello)) is equal? to "Hello World"
+ #+end_src
+
+While it works, it turns out the ~#lang~ and ~prelude:~ are totally different
+things. While that is a good thing to learn, it also means the build script need
+not worry for now.
+
+ #+begin_src shell
+ ... check (car (hello)) is equal? to "Hello World"
+ #+end_src
+
+
+*** Break into modules
+
+    Before starting on the major reason behind the last 800 or so LiterateLoC's
+    let's start to break things up into parts. This helps to separate the code
+    and concerns as well as test itself on itself.
+
+    First, a ~base~ where all things spring from. Well, that is to say, after
+    pulling the bootstraps.
+
+    #+begin_src scheme :noweb-ref base-outputs
+  (def (force-outputs) (force-output (current-error-port)) (force-output)) ;; move to std/misc/ports ?
+  (def (message . lst) (apply displayln lst) (force-outputs)) ;; move to std/misc/ports ?
+    #+end_src
+
+
+#+begin_src scheme :tangle "./make/base.ss" :mkdirp yes :noweb yes
+  package: std/make
+  (import :std/misc/list :gerbil/gambit/ports)
+  (export #t)
+
+  (def default-gambit-gsc "gsc")
+  (def default-gerbil-gxc "gxc")
+
+  (def (gerbil-gsc)
+    (getenv "GERBIL_GSC" default-gambit-gsc))
+  (def (gerbil-gxc)
+    (getenv "GERBIL_GXC" default-gerbil-gxc))
+
+  ;;; Functions that should be better moved some library...
+  <<base-outputs>>
+  (def (writeln x) (write x) (newline) (force-outputs)) ;; move to std/misc/ports ?
+  (def (prefix/ prefix path) (if prefix (string-append prefix "/" path) path)) ;; move to std/misc/path ?
+
+  ;;; Functions partially reimplemented from std/srfi/43. See bug #465
+  (def (vector-for-each f v)
+    (def l (vector-length v))
+    (let loop ((i 0)) (when (< i l) (begin (f i (vector-ref v i)) (loop (+ 1 i))))))
+  (def (vector-ensure-ref v i f)
+    (or (vector-ref v i) (let ((x (f))) (vector-set! v i x) x)))
+#+end_src
+
+Then the settings.
+
+#+begin_src scheme :noweb-ref settings-verbose>=?
+(def (settings-verbose>=? settings level)
+  (def verbose (settings-verbose settings))
+  (and (real? level) (real? verbose) (>= verbose level)))
+#+end_src
+#+begin_src scheme :noweb yes :tangle "make/settings.ss"
+package: std/make
+(export #t)
+
+<<unite-settings-struct>>
+
+<<gerbil-build-cores>>
+
+<<unite-settings-init>>
+
+<<settings-verbose>=?>>
+#+end_src
+
+Now the expander module.
+
+#+begin_src scheme :tangle "make/expander-module.ss" :noweb yes
+  package: std/make
+  (import :std/misc/func :gerbil/expander/module :std/lazy)
+  (export #t)
+
+  <<prep-import-module>>
+
+  (def expander-module-id gx#expander-context-id)
+
+  (def expander-module-name
+    (compose string->symbol path-strip-directory
+             symbol->string expander-module-id))
+
+  (def expander-module-relative-library-directory
+    (compose path-strip-trailing-directory-separator path-directory
+             symbol->string expander-module-id))
+
+  (def (expander-module-package m)
+    (let (d (expander-module-relative-library-directory m))
+      (if (equal? "" d) #f (string->symbol d))))
+
+
+  (def expander-module-namespace gx#module-context-ns)
+  (def expander-module-prelude gx#&phi-context-super)
+#+end_src
+
+*** ~mod~'s: Talking 'bout this generation
+Time for the ~mod~'s to rumble. What is a ~mod~? A mod is a string specifying a
+file's name and relative location.
+
+With a ~mod~ we can get an ~expander-module~ which has an
+~expander-module-relative-library-directory~.
+
+That's what we need for ~library-path~.
+
+#+begin_src scheme :noweb-ref library-path
+  (def (library-path mod ext (settings (current-make-settings)))
+    (let (expm (mod-expander-module mod settings))
+      (path-expand (path-force-extension mod ext)
+                   (path-expand (expander-module-relative-library-directory expm)
+                                (settings-libdir settings)))))
+#+end_src
+
+#+begin_src scheme :tangle "make/mod.ss" :noweb yes
+  package: std/make
+  (import ./expander-module :std/make/settings :std/misc/func :std/misc/path)
+  (export #t)
+
+  <<source-path>>
+
+  (def mod-expander-modules (make-hash-table)) ;;; cache
+  (def (mod-expander-module mod (settings (current-make-settings)) (reload? #f))
+    (let (v (hash-ref mod-expander-modules mod (void)))
+      (if (and (not (void? v)) (not reload?)) v
+          (let* ((src (source-path mod ".ss" settings))
+                 (m (and (file-exists? src)
+                         (prep-import-module
+                          src
+                          srcdir: (settings-srcdir settings)
+                          package: (settings-package settings)
+                          namespace: (settings-namespace settings)
+                          reload?))))
+            (begin0 m (hash-put! mod-expander-modules mod m))))))
+
+  <<library-path>>
+
+  (def (static-file-path file settings)
+    (let* ((libdir (settings-libdir settings))
+           (staticdir (path-expand "static" libdir))
+           (filename (path-strip-directory file)))
+      (path-expand filename staticdir)))
+ #+end_src
+
+
+*** ~gxc-compile-file~: `make;make install`
+
+#+begin_src scheme :noweb-ref gsc-compile-opts
+(def (gsc-compile-opts opts)
+  (match opts
+    ([[plist ...] . rest] (listify rest))
+    (_ (listify opts))))
+#+end_src
+
+#+begin_src scheme :noweb-ref gxc-compile-file
+  (def (gxc-compile-file mod opts settings (invoke-gsc? #t))
+    (message "... compile-file " mod)
+    (def gsc-opts (gsc-compile-opts opts))
+    (def srcpath (source-path mod ".ss" settings))
+    (let ((gxc-opts
+           [invoke-gsc: invoke-gsc?
+                        keep-scm: (not invoke-gsc?)
+                        output-dir: (settings-libdir settings)
+                        optimize: (settings-optimize settings)
+                        debug: (settings-debug settings)
+                        generate-ssxi: #t
+                        static: (settings-static settings)
+                        verbose: (settings-verbose>=? settings 9)
+                        (when/list gsc-opts [gsc-options: gsc-opts]) ...]))
+      (compile-file srcpath gxc-opts)))
+#+end_src
+
+*** bootstrap
+
+
+Going to have an attempt at building that before there's a function to build it,
+as we have all along.
+
+Because we cannot build ourselves we bootstrap our build.
+
+#+begin_src scheme :tangle ./test/test-bootstrap1.ss :noweb yes
+  (import :std/misc/path :std/misc/list :gerbil/compiler)
+
+  <<unite-settings-struct>>
+
+  <<settings-verbose>=?>>
+  <<gerbil-build-cores>>
+
+  <<unite-settings-init>>
+
+  <<prep-import-module>>
+
+  <<source-path>>
+
+  <<base-outputs>>
+
+  <<gsc-compile-opts>>
+
+  <<gxc-compile-file>>
+
+  (def (set-loadpath settings)
+    (let* ((loadpath (getenv "GERBIL_LOAD_PATH" #f))
+           (loapath (if loadpath (string-append loadpath ":") ""))
+           (loadpath (string-append (or loadpath "") (settings-srcdir settings))))
+      (setenv "GERBIL_LOAD_PATH" loadpath)))
+
+  (def (prep-mod mod settings (reload? #f))
+    (prep-import-module                   ;
+     (source-path mod ".ss" settings)
+     srcdir: (settings-srcdir settings)
+     package: (settings-package settings)
+     namespace: (settings-namespace settings)
+     reload?))
+
+  (def (build-mods mods (srcdir (path-normalize (path-directory (this-source-file)))))
+    (def settings (make-settings srcdir: srcdir verbose: #t))
+    (set-loadpath settings)
+
+    (def (build-mod mod) (message "building " mod)
+      (prep-mod mod settings)
+      (gxc-compile-file mod [] settings))
+
+
+    (message "Builings Mods " mods)
+
+    (let build ((ms mods))
+      (unless (null? ms)
+        (build-mod (car ms)) (build (cdr ms)))))
+#+end_src
+
+#+begin_src scheme :tangle ./test/build1.ss :noweb yes :shebang "#!/usr/bin/env gxi"
+
+  (def +this-file+ (this-source-file))
+  (def +this-srcdir+ (path-normalize (path-directory +this-file+)))
+
+  (current-directory +this-srcdir+)
+  (load "test-bootstrap1.ss")
+
+  (def mods
+    '("make/base" "make/settings" "make/expander-module" "make/mod"))
+
+  (def +mod-src-dir+ (path-expand ".." +this-srcdir+ ))
+
+  (current-directory +mod-src-dir+)
+
+  (message "srcdir " +mod-src-dir+)
+
+  (build-mods mods +mod-src-dir+)
+
+#+end_src
+
+
+ #+begin_src shell :results output code
+   rm -rf ~/.gerbil/lib/std/make/*
+   ~/src/gerbil-build/test/build1.ss
+ #+end_src
+
+
+ #+begin_src shell
+ srcdir /home/user/src/gerbil-build/test/..
+ Builings Mods (make/base make/settings make/expander-module make/mod)
+ building make/base
+ ... compile-file make/base
+ building make/settings
+ ... compile-file make/settings
+ building make/expander-module
+ ... compile-file make/expander-module
+ building make/mod
+ ... compile-file make/mod
+ #+end_src
+
+
+** Step 3: Release pre-0.1 build
+
+Now that I have it working to build itself it's time to release it. First
+compile all the files using ourself. 
+
+The ~make/boostrap~ module has the bare minimum needed to make something.
+
+#+begin_src scheme :tangle ./make/bootstrap.ss :noweb yes
+  package: std/make
+  namespace: std/make/bootstrap
+  (import :std/misc/path :std/misc/list :gerbil/compiler :gerbil/gambit/ports)
+  (export #t)
+
+  <<unite-settings-struct>>
+
+  <<settings-verbose>=?>>
+
+  <<gerbil-build-cores>>
+
+  <<unite-settings-init>>
+
+  <<prep-import-module>>
+
+  <<source-path>>
+
+  <<base-outputs>>
+
+  <<gsc-compile-opts>>
+
+  <<gxc-compile-file>>
+
+  (def (set-loadpath settings)
+    (let* ((loadpath (getenv "GERBIL_LOAD_PATH" #f))
+           (loapath (if loadpath (string-append loadpath ":") ""))
+           (loadpath (string-append (or loadpath "") (settings-srcdir settings))))
+      (setenv "GERBIL_LOAD_PATH" loadpath)))
+
+  (def (prep-mod mod settings (reload? #f))
+    (prep-import-module                   ;
+     (source-path mod ".ss" settings)
+     srcdir: (settings-srcdir settings)
+     package: (settings-package settings)
+     namespace: (settings-namespace settings)
+     reload?))
+
+  (def (bootstrap-make mods srcdir)
+    (def settings (make-settings srcdir: srcdir verbose: 10))
+    (set-loadpath settings)
+
+    (def (build-mod mod) (message "Bootstrap building " mod)
+      (prep-mod mod settings)
+      (gxc-compile-file mod [] settings))
+
+
+    (let build ((ms mods))
+      (unless (null? ms)
+        (build-mod (car ms)) (build (cdr ms)))))
+#+end_src
+
+**** ~make/gsc~: The Gambit compiler
+
+There's one function that belongs here.
+
+#+begin_src scheme :tangle make/gsc.ss :noweb yes
+package: std/make
+(import :std/misc/list)
+(export gsc-compile-opts)
+<<gsc-compile-opts>>
+#+end_src
+ 
+
+**** ~make/gxc~: The gerbil compiler
+
+
+ [[#gxc_outputs_begin][Now,]] it seems that the entire reason I started this was an error that may get
+ taken care of by redefining ~gxc-outputs~. Still not quite done as I have no
+ idea where ~static-path~ is actually built or used, but that matters not for
+ this release.
+
+#+begin_src scheme :noweb-ref gxc-outputs-no-static
+(def (gxc-outputs mod opts settings)
+  [(library-path mod ".ssi" settings)
+  ; (when/list (settings-static settings) [(static-path mod settings)]) ...
+  ])
+#+end_src
+
+
+ #+begin_src scheme :tangle make/gxc.ss :noweb yes
+ package: std/make
+ (import ./base ./settings ./mod ./gsc :std/misc/list :gerbil/compiler)
+ (export gxc-compile gxc-outputs)
+
+ <<gxc-outputs-no-static>>
+
+ <<gxc-compile-file>>
+
+ (def gxc-compile gxc-compile-file)
+ #+end_src
+
+**** ~make/spec~: Specifications
+
+Essentially we want a short form syntax for making *make/makefiles*, aka
+~build.ss~.
+
+Specs are built.
+
+#+begin_src scheme :noweb-ref build-only-gxc
+  (def (spec-build spec settings)
+    (match spec
+      ((? string? modf)
+       (gxc-compile modf #f settings #t))
+      ([gxc: modf . opts]
+       (gxc-compile modf opts settings #t))
+      ;; ([gsc: modf . opts]
+      ;;  (gsc-compile modf opts settings))
+      ;; ([ssi: modf . submodules]
+      ;;  (for-each (cut build <> settings) submodules)
+      ;;  (compile-ssi modf '() settings))
+      ;; ([exe: modf . opts]
+      ;;  (compile-exe modf opts settings))
+      ;; ([static-exe: modf . opts]
+      ;;  (compile-static-exe modf opts settings))
+      ;; ([static-include: file]
+      ;;  (copy-static file settings))
+      ;; ([copy: file]
+      ;;  (copy-compiled file settings))
+      (else
+       (error "Bad buildspec" spec))))
+#+end_src
+
+#+begin_src scheme :tangle make/spec.ss :noweb yes
+  package: std/make
+  (import ./mod ./gxc :std/srfi/1)
+  (export #t)
+  ;;; Build item spec
+  (def (spec-type spec)
+    (match spec
+      ((? string? _) gxc:)
+      ([(? keyword? type) . _] type)
+      (else (error "Bad buildspec" spec))))
+
+  (def (spec-file spec settings)
+    (match spec
+      ((? string? modf) (source-path modf ".ss" settings))
+      ([gxc: modf . opts] (source-path modf ".ss" settings))
+      ([gsc: modf . opts] (source-path modf ".scm" settings))
+      ([ssi: modf . deps] (source-path modf ".ssi" settings))
+      ([exe: modf . opts] (source-path modf ".ss" settings))
+      ([static-exe: modf . opts] (source-path modf ".ss" settings))
+      ([static-include: file] (static-file-path file settings))
+      ([copy: file] file)
+      (else
+       (error "Bad buildspec" spec))))
+
+  (def (spec-inputs spec settings)
+    [(spec-file spec settings) (spec-extra-inputs spec settings) ...])
+
+  (def (spec-extra-inputs spec settings)
+    (match spec
+      ([gxc: . _] (pgetq extra-inputs: (spec-plist spec) []))
+      ([gsc: . _] (pgetq extra-inputs: (spec-plist spec) []))
+      ([ssi: _ . submodules] (append-map (cut spec-inputs <> settings) submodules))
+      (_ [])))
+
+  (def (spec-plist spec)
+    (match spec
+      ([(? (cut member <> '(gxc: gsc:))) _ [plist ...] . _] plist)
+      (_ [])))
+
+  (def (spec-outputs spec settings)
+    (match spec
+      ((? string? modf) (gxc-outputs modf #f settings))
+      ([gxc: modf . opts] (gxc-outputs modf opts settings))
+      ;; ([gsc: modf . opts] [(gsc-c-path modf settings)])
+      ([ssi: modf . submodules] [(library-path modf ".ssi" settings)
+                                 (append-map (cut spec-outputs <> settings) submodules) ...])
+      ;; ([exe: modf . opts] [(library-path modf ".ssi" settings)
+      ;;                      (binary-path modf opts settings)])
+      ;; ([static-exe: modf . opts] [(binary-path modf opts settings)
+      ;;                            (static-path modf settings)])
+      ([static-include: file] [(static-file-path file settings)])
+      ([copy: file] [(library-path file #f settings)])
+      (else (error "Bad buildspec" spec))))
+
+  (def (spec-backgroundable? spec)
+    (case (spec-type spec)
+      ((gxc:) (not (pgetq foreground: (spec-plist spec))))
+      ((gsc:) #t)
+      (else #f)))
+
+  <<build-only-gxc>>
+#+end_src
+
+
+**** ~make/make~: The maker of makes
+
+We very much want build.ss to be minimal. This is where the middle meddling all
+takes place.
+
+We'll just simply experiment. We error if there is no input, and warn if the
+output "fails".
+
+#+begin_src scheme :tangle "make/make.ss"
+  package: std/make
+  (import ./spec ./base ./settings)
+  (export make)
+
+  (def (make-spec spec settings)
+    (def inputs (spec-inputs spec settings))
+    (def outputs (spec-outputs spec settings))
+
+    (let exists? ((is inputs))
+      (unless (null? is)
+        (unless (file-exists? (car is))
+          (error "Build Input file does not exist: " (car is)))
+        (exists? (cdr is))))
+
+    (let (res (spec-build spec settings))
+      (begin0 res
+        (message "build result " res " for " spec)
+        (let exists? ((os outputs))
+          (unless (null? os) (unless (file-exists? (car os))
+                               (displayln "\nBuild Output file does not exist: " (car os)))
+                  (exists? (cdr os)))))))
+
+  (def (make build-spec . args)
+    (def settings (apply make-settings args))
+    (let %make ((s build-spec))
+      (def spec (car s)) (def rest (cdr s))
+      (make-spec spec settings) (unless (null? rest) (%make rest))))
+#+end_src
+
+**** ~/make/script~: A clone of up above.
+
+#+begin_src scheme :tangle make/script.ss
+;;; -*- Gerbil -*-
+;;; (C) vyzo at hackzen.org, me at drewc.ca
+;;; package build script template
+package: std/make
+(import :std/make/make
+        :gerbil/gambit/misc)
+
+(export defmake-script build-main)
+
+(def (build-main args build-spec keys that-file)
+  (def srcdir (path-normalize (path-directory that-file)))
+  (def (build) (apply make build-spec srcdir: srcdir keys))
+  (match args
+    (["meta"] (write '("spec" "compile")) (newline))
+    (["spec"] (pretty-print build-spec))
+    (["compile"] (build))
+    ([] (build))))
+
+(defsyntax (defmake-script stx)
+  (syntax-case stx ()
+    ((macro build-spec keys ...)
+     (with-syntax* ((@this-script (stx-identifier #'macro 'this-source-file))
+                    (+this-source-file+ (syntax/loc stx (@this-script)))
+                    (@main        (stx-identifier #'macro 'main)))
+       #'(def (@main . args)
+           (build-main args build-spec [keys ...] +this-source-file+))))))
+#+end_src
+**** ~build.ss~: The makefile for making makefiles.
+
+#+begin_src scheme :shebang "#!/usr/bin/env gxi" :tangle build.ss
+  (import :gerbil/expander :std/misc/path )
+
+  (def this-file (this-source-file))
+
+  (def srcdir (path-directory this-file))
+
+  (def build-specs
+    '("make/base" "make/settings" "make/expander-module" "make/mod"
+      "make/gsc" "make/gxc" "make/spec" "make/make" "make/script"))
+
+  (gx#import-module (path-expand "make/bootstrap.ss" srcdir) #t #t)
+
+  ((eval 'std/make/bootstrap#bootstrap-make) build-specs srcdir)
+#+end_src
+
+
+** Step 4: Test the new ~make/script~
+
+   This is just simple. There's a lot more to come but prerelease means only this.
+
+#+begin_src scheme :tangle test/build.ss :shebang "#!/usr/bin/env gxi"
+  (import :std/make/script)
+  (defmake-script ["hello"] verbose: 10)
+#+end_src
+
+#+begin_src shell :results output code
+rm ~/.gerbil/lib/drewc/hello*
+~/src/gerbil-build/test/build.ss
+#+end_src
+
+#+begin_src shell
+... compile-file hello
+compile /home/user/src/gerbil-build/test/hello.ss
+compile drewc/hello 
+# [...] 
+compile ~/.gerbil/lib/drewc/hello__0.scm
+invoke gsc (gsc -:i8,f8,-8,t8 -debug-environments ~/.gerbil/lib/drewc/hello__0.scm)
+copy static module ~/.gerbil/lib/drewc/hello__0.scm => ~/.gerbil/lib/static/drewc__hello.scm
+compile ~/.gerbil/lib/drewc/hello__rt.scm
+invoke gsc (gsc -:i8,f8,-8,t8 -debug-environments ~/.gerbil/lib/drewc/hello__rt.scm)
+compile ~/.gerbil/lib/drewc/hello.ssi
+generate typedecl drewc/hello#hello
+compile ~/.gerbil/lib/drewc/hello.ssxi.ss
+build result #!void for hello
+#+end_src
+
+#+begin_src scheme :tangle test/make-script.ss
+  (import :drewc/hello :std/test)
+
+  (check (drewc/hello#hello) => "Hello World")
+#+end_src
+
+#+begin_src shell
+gxi -e '(load "~/src/gerbil-build/test/make-script.ss")'
+#+end_src
+1
+: Hello World
+
+** Step 5: Publish Documentation (literately)
+
+Literate programming involves *weaving* out documentation as well and *tangling*
+source code.
+
+As of "right now" (git commit: ~d0ac46b370dbfa915b65a3c024eb63ac27d1024e~),
+everything is contained in a ~README.org~ which, to be quite honest, is not
+necessarily the correct place to design, implement and document an entire
+project.
+
+*** Org Mode and HTML
+
+https://orgmode.org/worg/org-tutorials/org-publish-html-tutorial.html
+
+ "The export options template The first choice is the export options template on
+ top of the file. When in an Org-mode file, you may insert basic information
+ using C-c C-e # (org-export-dispatch)"
+
+ #+begin_src emacs-lisp
+   (require 'ox-rss)
+
+   (defvar-local g-b-pubdir "~/src/gerbil-build/doc/html/")
+
+   (defun drewc/org-rss-publish-to-rss (plist filename pub-dir)
+     "Publish RSS with PLIST, only when FILENAME is 'rss.org'.
+   PUB-DIR is when the output will be placed."
+     (if (equal "rss.org" (file-name-nondirectory filename))
+         (org-rss-publish-to-rss plist filename pub-dir)))
+
+
+   (defun drewc/format-rss-feed (title list)
+     "Generate RSS feed, as a string.
+   TITLE is the title of the RSS feed.  LIST is an internal
+   representation for the files to include, as returned by
+   `org-list-to-lisp'.  PROJECT is the current project."
+     (concat "#+TITLE: " title "\n\n"
+             (org-list-to-subtree list 1 '(:icount "" :istart ""))))
+
+   (defun drewc/format-rss-feed-entry (entry style project)
+     "Format ENTRY for the RSS feed.
+   ENTRY is a file name.  STYLE is either 'list' or 'tree'.
+   PROJECT is the current project."
+     (cond ((not (directory-name-p entry))
+            (let* ((file (org-publish--expand-file-name entry project))
+                 (title (org-publish-find-title entry project))
+                 (date (format-time-string "%Y-%m-%d" (org-publish-find-date entry project)))
+                 (link (concat (file-name-sans-extension entry) ".html")))
+            (with-temp-buffer
+              (insert (format "* [[file:%s][%s]]\n" file title))
+              (org-set-property "RSS_PERMALINK" link)
+              (org-set-property "PUBDATE" date)
+              (insert-file-contents file)
+              (buffer-string))))
+         ((eq style 'tree)
+          ;; Return only last subdir.
+          (file-name-nondirectory (directory-file-name entry)))
+         (t entry)))
+
+
+   (setq org-publish-project-alist
+         `(("gerbil-build-docs-static"
+            :base-directory "~/src/gerbil-build/"
+            :publishing-directory ,g-b-pubdir
+            :publishing-function org-publish-attachment
+            :recursive t
+            :base-extension "css\\|js\\|png\\|jpg\\|gif\\|pdf\\|mp3\\|ogg\\|swf"
+            )
+
+
+           ("gerbil-build-site"
+            :base-directory "~/src/gerbil-build/"
+            :publishing-directory "~/src/gerbil-build/doc/html/"
+            :publishing-function org-html-publish-to-html
+            :section-numbers nil
+            :with-toc nil
+            :recursive t)
+           ("gerbil-build-blog-rss"
+            :base-directory "log"
+            :base-extension "org"
+            :recursive nil
+            :exclude ,(regexp-opt '("rss.org" "index.org" "404.org"))
+            :publishing-function drewc/org-rss-publish-to-rss
+            :publishing-directory ,g-b-pubdir
+            :rss-extension "xml"
+            :html-link-home "https://gerbil-build.drewc.ca"
+            :html-link-use-abs-url t
+            :html-link-org-files-as-html t
+            :auto-sitemap t
+            :sitemap-filename "rss.org"
+            :sitemap-title "Gerbil Build <me@drewc.ca>"
+            :sitemap-style list
+            :sitemap-sort-files anti-chronologically
+            :sitemap-function drewc/format-rss-feed
+            :sitemap-format-entry drewc/format-rss-feed-entry)
+        
+           ))
+
+
+ #+end_src
+
+*** ~index.org~
+
+I'm going to make a simple file that really is the index of this project for everybody.
+
+*** RSS feed and ~./doc/log~: A weblog for this project.
+
+Shortly, the majority will still be contained in a file, but it will be a blog
+post that, if you're not me writing and editing it, is likely what you are
+reading now.
+
+I've never really been into RSS or blog posts and the like, but have decided to
+become more public and also to promote and support my software beyond my
+clients.
+
+As Googluck would have it, there is a [[https://writepermission.com/org-blogging-rss-feed.html][wonderful blog post]] by [[https://iotcl.com/][Toon Claes]] that
+mentions exactly how I want to generate the RSS feed
+
+
+
+* Appendicitis
+
+
+#+begin_src scheme :noweb yes :tangle test/test-make-gxc.ss
+  <<make-gxc-imports>>
+
+  <<settings-struct>>
+
+  <<gerbil-build-cores>>
+
+  <<settings-init>>
+
+  <<source-path>>
+
+  <<mod-modules>>
+
+  <<mod-core-modules>>
+
+  <<mod-module-id>>
+
+  <<module-ns>>
+
+  <<prep-module-code>>
+#+end_src
+
+
+1
